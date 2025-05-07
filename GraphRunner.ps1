@@ -4031,67 +4031,284 @@ function Invoke-SecurityGroupCloner{
 }
 
 
-function Get-UpdatableGroups{
+function Get-UpdatableGroups {
     <#
         .SYNOPSIS
-            Finds groups that can be updated by the current user. For example, if this reports any updatable groups then it may be possible to add new users to the reported group(s).
-            Author: Beau Bullock (@dafthack)
+            Finds groups that can be updated by the current user and includes group type information.
+            Author: Modified from original by You
             License: MIT
             Required Dependencies: None
             Optional Dependencies: None
 
         .DESCRIPTION
         
-           Finds groups that can be updated by the current user. For example, if this reports any updatable groups then it may be possible to add new users to the reported group(s).
+           Finds groups that can be updated by the current user. For example, if this reports any updatable groups 
+           then it may be possible to add new users to the reported group(s). Now includes information about the
+           group type (security, Microsoft 365, etc.)
 
-        .EXAMPLES      
-        
-            C:\PS> Get-UpdatableGroups -Tokens $tokens
-            C:\PS> Get-UpdatableGroups -Tokens $tokens -Client Custom -ClientID "cb1056e2-e479-49de-ae31-7812af012ed8" -Resource "https://graph.microsoft.com/ -Device AndroidMobile -Browser Android 
+        .PARAMETER Tokens
+            Pass the $tokens global variable after authenticating to this parameter.
+
+        .PARAMETER GraphApiEndpoint
+            The Microsoft Graph API endpoint for groups.
+
+        .PARAMETER EstimateAccessEndpoint
+            The Microsoft Graph API endpoint for estimating access.
+
+        .PARAMETER Resource
+            The resource to authenticate against.
+
+        .PARAMETER Device
+            The device type to use in the user agent.
+
+        .PARAMETER Browser
+            The browser to use in the user agent.
+
+        .PARAMETER ClientID
+            The client ID to use for authentication.
+
+        .PARAMETER BaseReportName
+            Base name for the generated report files (.csv, .html, and -summary.txt will be appended).
+
+        .PARAMETER AutoRefresh
+            If set, automatically refreshes tokens when they expire.
+
+        .PARAMETER RefreshInterval
+            How often to refresh tokens in seconds.
+
+        .PARAMETER IncludeMembers
+            If set, includes group membership in the output (can increase runtime).
+
+        .EXAMPLE
+            Get-UpdatableGroupsEnhanced -Tokens $tokens
+            
+            Description:
+            This finds all groups that the current user can update.
+
+        .EXAMPLE
+            Get-UpdatableGroupsEnhanced -Tokens $tokens -BaseReportName "updatable_groups_detailed" -IncludeMembers
+            
+            Description:
+            This finds all groups that the current user can update, includes member information, and outputs to custom report files.
     #>
 
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [object]
         $Tokens,
+
         [Parameter()]
         [string]
         $GraphApiEndpoint = "https://graph.microsoft.com/v1.0/groups",
+
         [Parameter()]
         [string]
         $EstimateAccessEndpoint = "https://graph.microsoft.com/beta/roleManagement/directory/estimateAccess",
+
         [string]$RefreshToken,
+
         [Parameter(Mandatory = $False)]
         [string]
         $tenantid = $global:tenantid,
+
         [Parameter(Mandatory=$False)]
         [ValidateSet("Yammer","Outlook","MSTeams","Graph","AzureCoreManagement","AzureManagement","MSGraph","DODMSGraph","Custom","Substrate")]
         [String[]]
         $Client = "MSGraph",
+
         [Parameter(Mandatory=$False)]
         [String]
         $ClientID = "d3590ed6-52b3-4102-aeff-aad2292ab01c",    
+
         [Parameter(Mandatory=$False)]
         [String]
         $Resource = "https://graph.microsoft.com",
+
         [Parameter(Mandatory=$False)]
         [ValidateSet('Mac','Windows','AndroidMobile','iPhone')]
         [String]
         $Device = "Windows",
+
         [Parameter(Mandatory=$False)]
         [ValidateSet('Android','IE','Chrome','Firefox','Edge','Safari')]
         [String]
-        $Browser = "Edge",  # Set the default value to "Edge"
+        $Browser = "Edge",
+
         [Parameter(Mandatory = $False)]
         [string]
-        $OutputFile = "Updatable_groups.csv",  # Set the default value to "Updatable_groups.csv"
+        $BaseReportName = "Updatable_groups",
+
         [Parameter(Mandatory=$False)]
         [switch]
         $AutoRefresh,
+
         [Parameter(Mandatory=$False)]
         [Int]
-        $RefreshInterval = (60 * 10) # 10 minutes
+        $RefreshInterval = (60 * 10), # 10 minutes
+        
+        [Parameter(Mandatory=$False)]
+        [switch]
+        $IncludeMembers
     )
+
+    # Helper function for handling API requests with retry logic
+    function Invoke-GraphRequestWithRetry {
+        param (
+            [Parameter(Mandatory = $true)]
+            [string]$Uri,
+            
+            [Parameter(Mandatory = $true)]
+            [hashtable]$Headers,
+            
+            [Parameter(Mandatory = $false)]
+            [string]$Method = "Get",
+            
+            [Parameter(Mandatory = $false)]
+            [object]$Body = $null,
+            
+            [Parameter(Mandatory = $false)]
+            [int]$MaxRetries = 5,
+            
+            [Parameter(Mandatory = $false)]
+            [int]$InitialRetrySeconds = 5
+        )
+        
+        $retryCount = 0
+        $success = $false
+        $result = $null
+        
+        while (-not $success -and $retryCount -lt $MaxRetries) {
+            try {
+                if ($Body) {
+                    $result = Invoke-RestMethod -Uri $Uri -Headers $Headers -Method $Method -Body $Body
+                } else {
+                    $result = Invoke-RestMethod -Uri $Uri -Headers $Headers -Method $Method
+                }
+                $success = $true
+            } catch {
+                if ($_.Exception.Response.StatusCode.value__ -eq 429) {
+                    $retryCount++
+                    $retryAfter = $InitialRetrySeconds
+                    
+                    # Check if the response has a Retry-After header
+                    if ($_.Exception.Response.Headers["Retry-After"]) {
+                        $retryAfter = [int]$_.Exception.Response.Headers["Retry-After"]
+                    }
+                    
+                    Write-Host -ForegroundColor Yellow "[*] Being throttled by API (429). Waiting $retryAfter seconds. Retry $retryCount of $MaxRetries..."
+                    Start-Sleep -Seconds $retryAfter
+                } else {
+                    # Re-throw the original exception for non-429 errors
+                    throw $_
+                }
+            }
+        }
+        
+        if (-not $success) {
+            throw "Maximum retries ($MaxRetries) reached when attempting API request to $Uri"
+        }
+        
+        return $result
+    }
+
+    # Add delay function to prevent rate limiting
+    function Add-RandomDelay {
+        param (
+            [Parameter(Mandatory = $false)]
+            [int]$MinSeconds = 1,
+            
+            [Parameter(Mandatory = $false)]
+            [int]$MaxSeconds = 3
+        )
+        
+        $delay = Get-Random -Minimum $MinSeconds -Maximum $MaxSeconds
+        if ($delay -ge 1) {
+            Write-Host -ForegroundColor Cyan "[*] Adding random delay of $delay seconds to avoid rate limiting..."
+            Start-Sleep -Seconds $delay
+        } else {
+            # Just sleep without notification for very short delays
+            Start-Sleep -Seconds $delay
+        }
+    }
+
+    # Function to determine group type based on properties - enhanced with insights from the blog
+    function Get-GroupTypeInfo {
+        param (
+            [Parameter(Mandatory = $true)]
+            [PSCustomObject]$Group
+        )
+        
+        $groupType = @()
+        $groupClassification = ""
+        
+        # Check if it's a security group
+        if ($Group.securityEnabled -eq $true) {
+            $groupType += "Security"
+            
+            # Check if it's a role-assignable
+            if ($Group.isAssignableToRole -eq $true) {
+                $groupType += "Role-Assignable"
+                $groupClassification = "Can be assigned to admin roles"
+            }
+        }
+        
+        # Check if it's a mail-enabled group
+        if ($Group.mailEnabled -eq $true) {
+            if ($Group.securityEnabled -eq $true) {
+                $groupType += "Mail-Enabled Security"
+                $groupClassification = "Both security and email capabilities"
+            } else {
+                $groupType += "Distribution"
+                $groupClassification = "Email distribution only"
+            }
+        }
+        
+        # Check if it's a Microsoft 365 group
+        if ($Group.groupTypes -contains "Unified") {
+            $groupType += "Microsoft 365"
+            $groupClassification = "Collaborative workspace with shared resources"
+            
+            # Check for special Microsoft 365 group types
+            if ($Group.resourceProvisioningOptions -contains "Team") {
+                $groupType += "Teams-Connected"
+                $groupClassification = "Microsoft Teams workspace"
+            }
+            
+            if ($Group.resourceBehaviorOptions -contains "HideGroupInOutlook") {
+                $groupType += "Hidden from GAL"
+            }
+            
+            if ($Group.resourceBehaviorOptions -contains "AllowOnlyMembersToPost") {
+                $groupType += "Restricted Posting"
+            }
+        }
+        
+        # Check if it's a dynamic group
+        if ($Group.groupTypes -contains "DynamicMembership") {
+            $groupType += "Dynamic"
+            $groupClassification = "Membership managed by rules"
+        }
+        
+        # Additional classification based on characteristics
+        if ($Group.visibility -eq "Private") {
+            $groupClassification = "Private: " + $groupClassification
+        } elseif ($Group.visibility -eq "Public") {
+            $groupClassification = "Public: " + $groupClassification
+        } elseif ($Group.visibility -eq "Hidden") {
+            $groupClassification = "Hidden: " + $groupClassification
+        }
+        
+        # If we have no specific types, it's a standard security group
+        if ($groupType.Count -eq 0) {
+            $groupType += "Standard Security"
+            $groupClassification = "Basic security group"
+        }
+        
+        return @{
+            Types = ($groupType -join ", ")
+            Classification = $groupClassification
+        }
+    }
 
     try {
         $accesstoken = $Tokens.access_token
@@ -4108,16 +4325,32 @@ function Get-UpdatableGroups{
         $startTime = Get-Date
         $refresh_Interval = [TimeSpan]::FromSeconds($RefreshInterval)
 
+        # Get current user ID for command generation
+        $currentUserId = $null
+        $currentUserDisplayName = $null
+        $currentUserUPN = $null
+        try {
+            $currentUserInfo = Invoke-GraphRequestWithRetry -Uri "https://graph.microsoft.com/v1.0/me" -Headers $headers
+            $currentUserId = $currentUserInfo.id
+            $currentUserDisplayName = $currentUserInfo.displayName
+            $currentUserUPN = $currentUserInfo.userPrincipalName
+        } catch {
+            $currentUserId = "CURRENT-USER-ID"
+            $currentUserDisplayName = "Current User"
+            $currentUserUPN = "user@domain.com"
+            Write-Host -ForegroundColor Yellow "[!] Could not retrieve current user info: $_"
+        }
+
         do {
             try {
                 try {
-                $response = Invoke-RestMethod -Uri $GraphApiEndpoint -Headers $headers -Method Get
+                    $response = Invoke-GraphRequestWithRetry -Uri $GraphApiEndpoint -Headers $headers -Method Get
                 } catch {
                     if ($_.Exception.Response.StatusCode.value__ -match "429") {
                         Write-Host -ForegroundColor Red "[*] Being throttled... sleeping for 5 seconds"
                         Start-Sleep -Seconds 5
                     } else {
-                        Write-Host -ForegroundColor Red "[*] An error occurred while retrieving members for group $($group.displayName): $($_.Exception.Message)"
+                        Write-Host -ForegroundColor Red "[*] An error occurred while retrieving groups: $($_.Exception.Message)"
                     }
                 }
                 foreach ($group in $response.value) {
@@ -4132,7 +4365,7 @@ function Get-UpdatableGroups{
                         }
                         Write-Host -ForegroundColor Yellow "[*] Resuming script..."
                         $startTime = Get-Date
-                    }  
+                    }
 
                     $groupid = ("/" + $group.id)
                     $requestBody = @{
@@ -4146,7 +4379,7 @@ function Get-UpdatableGroups{
 
                     try {
                         try {
-                        $estimateresponse = Invoke-RestMethod -Uri $EstimateAccessEndpoint -Headers $headers -Method Post -Body $requestBody
+                            $estimateresponse = Invoke-GraphRequestWithRetry -Uri $EstimateAccessEndpoint -Headers $headers -Method Post -Body $requestBody
                         }
                         catch {
                             if ($_.Exception.Response.StatusCode.value__ -match "429") {
@@ -4157,14 +4390,299 @@ function Get-UpdatableGroups{
                             }
                         }
                         if ($estimateresponse.value.accessDecision -eq "allowed") {
-                            Write-Host -ForegroundColor Green ("[+] Found updatable group: " + $group.displayName + ": " + $group.id)
-                            $group.displayName+":"+$group.id|Out-File  -Append -Encoding Ascii $OutputFile
-                            $groupout = $group | Select-Object -Property displayName, id, description, isAssignableToRole, onPremisesSyncEnabled, mail, createdDateTime, visibility
+                            # Check for possible on-premises group information
+                            $onPremInfo = ""
+                            if ($group.onPremisesSyncEnabled -eq $true) {
+                                $onPremInfo = "Synced from on-premises"
+                                if ($group.onPremisesNetBiosName) {
+                                    $onPremInfo += " ($($group.onPremisesNetBiosName))"
+                                }
+                                if ($group.onPremisesSamAccountName) {
+                                    $onPremInfo += ", SAM: $($group.onPremisesSamAccountName)"
+                                }
+                                if ($group.onPremisesSecurityIdentifier) {
+                                    $onPremInfo += ", SID: $($group.onPremisesSecurityIdentifier)"
+                                }
+                            }
+                            
+                            # Check for owners
+                            try {
+                                $ownersUrl = "https://graph.microsoft.com/v1.0/groups/$($group.id)/owners"
+                                $ownersResponse = Invoke-GraphRequestWithRetry -Uri $ownersUrl -Headers $headers
+                                $owners = @()
+                                
+                                foreach ($owner in $ownersResponse.value) {
+                                    if ($owner.'@odata.type' -eq '#microsoft.graph.user') {
+                                        $owners += $owner.userPrincipalName
+                                    } else {
+                                        $owners += "$($owner.displayName) ($($owner.'@odata.type'))"
+                                    }
+                                }
+                                
+                                # Handle pagination for owners
+                                $nextOwnersLink = $ownersResponse.'@odata.nextLink'
+                                while ($nextOwnersLink) {
+                                    Add-RandomDelay -MinSeconds 1 -MaxSeconds 2
+                                    $nextOwnersResponse = Invoke-GraphRequestWithRetry -Uri $nextOwnersLink -Headers $headers
+                                    
+                                    foreach ($owner in $nextOwnersResponse.value) {
+                                        if ($owner.'@odata.type' -eq '#microsoft.graph.user') {
+                                            $owners += $owner.userPrincipalName
+                                        } else {
+                                            $owners += "$($owner.displayName) ($($owner.'@odata.type'))"
+                                        }
+                                    }
+                                    
+                                    $nextOwnersLink = $nextOwnersResponse.'@odata.nextLink'
+                                }
+                            } catch {
+                                $owners = @("Error retrieving owners: $($_.Exception.Message)")
+                            }
+                            
+                            # Check for app role assignments
+                            try {
+                                $appRolesUrl = "https://graph.microsoft.com/v1.0/groups/$($group.id)/appRoleAssignments"
+                                $appRolesResponse = Invoke-GraphRequestWithRetry -Uri $appRolesUrl -Headers $headers
+                                $appRoles = @()
+                                
+                                foreach ($role in $appRolesResponse.value) {
+                                    try {
+                                        $servicePrincipalUrl = "https://graph.microsoft.com/v1.0/servicePrincipals/$($role.resourceId)"
+                                        $servicePrincipal = Invoke-GraphRequestWithRetry -Uri $servicePrincipalUrl -Headers $headers
+                                        
+                                        # Find role name
+                                        $roleName = "Unknown Role"
+                                        foreach ($appRole in $servicePrincipal.appRoles) {
+                                            if ($appRole.id -eq $role.appRoleId) {
+                                                $roleName = $appRole.displayName
+                                                break
+                                            }
+                                        }
+                                        
+                                        $appRoles += "$($servicePrincipal.displayName): $roleName"
+                                    } catch {
+                                        $appRoles += "Error retrieving role details: $($role.resourceId)"
+                                    }
+                                    
+                                    # Add a small delay to avoid rate limiting
+                                    Start-Sleep -Milliseconds (Get-Random -Minimum 100 -Maximum 500)
+                                }
+                                
+                                # Handle pagination for app roles
+                                $nextAppRolesLink = $appRolesResponse.'@odata.nextLink'
+                                while ($nextAppRolesLink) {
+                                    Add-RandomDelay -MinSeconds 1 -MaxSeconds 2
+                                    $nextAppRolesResponse = Invoke-GraphRequestWithRetry -Uri $nextAppRolesLink -Headers $headers
+                                    
+                                    foreach ($role in $nextAppRolesResponse.value) {
+                                        try {
+                                            $servicePrincipalUrl = "https://graph.microsoft.com/v1.0/servicePrincipals/$($role.resourceId)"
+                                            $servicePrincipal = Invoke-GraphRequestWithRetry -Uri $servicePrincipalUrl -Headers $headers
+                                            
+                                            # Find role name
+                                            $roleName = "Unknown Role"
+                                            foreach ($appRole in $servicePrincipal.appRoles) {
+                                                if ($appRole.id -eq $role.appRoleId) {
+                                                    $roleName = $appRole.displayName
+                                                    break
+                                                }
+                                            }
+                                            
+                                            $appRoles += "$($servicePrincipal.displayName): $roleName"
+                                        } catch {
+                                            $appRoles += "Error retrieving role details: $($role.resourceId)"
+                                        }
+                                        
+                                        # Add a small delay to avoid rate limiting
+                                        Start-Sleep -Milliseconds (Get-Random -Minimum 100 -Maximum 500)
+                                    }
+                                    
+                                    $nextAppRolesLink = $nextAppRolesResponse.'@odata.nextLink'
+                                }
+                            } catch {
+                                $appRoles = @("Error retrieving app roles: $($_.Exception.Message)")
+                            }
+                            
+                            # Look for group memberships (what groups is this group a member of)
+                            try {
+                                $memberOfUrl = "https://graph.microsoft.com/v1.0/groups/$($group.id)/memberOf"
+                                $memberOfResponse = Invoke-GraphRequestWithRetry -Uri $memberOfUrl -Headers $headers
+                                $memberOf = @()
+                                
+                                foreach ($parentGroup in $memberOfResponse.value) {
+                                    if ($parentGroup.'@odata.type' -eq '#microsoft.graph.group') {
+                                        $memberOf += "$($parentGroup.displayName) ($($parentGroup.id))"
+                                    } elseif ($parentGroup.'@odata.type' -eq '#microsoft.graph.directoryRole') {
+                                        $memberOf += "DIRECTORY ROLE: $($parentGroup.displayName) ($($parentGroup.id))"
+                                    } else {
+                                        $memberOf += "$($parentGroup.displayName) ($($parentGroup.'@odata.type'))"
+                                    }
+                                }
+                                
+                                # Handle pagination for memberOf
+                                $nextMemberOfLink = $memberOfResponse.'@odata.nextLink'
+                                while ($nextMemberOfLink) {
+                                    Add-RandomDelay -MinSeconds 1 -MaxSeconds 2
+                                    $nextMemberOfResponse = Invoke-GraphRequestWithRetry -Uri $nextMemberOfLink -Headers $headers
+                                    
+                                    foreach ($parentGroup in $nextMemberOfResponse.value) {
+                                        if ($parentGroup.'@odata.type' -eq '#microsoft.graph.group') {
+                                            $memberOf += "$($parentGroup.displayName) ($($parentGroup.id))"
+                                        } elseif ($parentGroup.'@odata.type' -eq '#microsoft.graph.directoryRole') {
+                                            $memberOf += "DIRECTORY ROLE: $($parentGroup.displayName) ($($parentGroup.id))"
+                                        } else {
+                                            $memberOf += "$($parentGroup.displayName) ($($parentGroup.'@odata.type'))"
+                                        }
+                                    }
+                                    
+                                    $nextMemberOfLink = $nextMemberOfResponse.'@odata.nextLink'
+                                }
+                            } catch {
+                                $memberOf = @("Error retrieving group memberships: $($_.Exception.Message)")
+                            }
+                            
+                            # Check when the group was last modified
+                            $lastModified = "Unknown"
+                            if ($group.PSObject.Properties.Name -contains "lastModifiedDateTime") {
+                                $lastModified = $group.lastModifiedDateTime
+                            }
+                            
+                            # Check for additional Microsoft 365 group features
+                            $teamsConnected = $false
+                            $sharedResources = ""
+                            
+                            # Check if the group has resource provisioning options
+                            if ($group.resourceProvisioningOptions) {
+                                if ($group.resourceProvisioningOptions -contains "Team") {
+                                    $teamsConnected = $true
+                                    $sharedResources += "Teams Site;"
+                                }
+                                
+                                if ($group.resourceProvisioningOptions -contains "SharePoint") {
+                                    $sharedResources += "SharePoint Site;"
+                                }
+                                
+                                if ($group.resourceProvisioningOptions -contains "Exchange") {
+                                    $sharedResources += "Shared Mailbox;"
+                                }
+                                
+                                if ($group.resourceProvisioningOptions -contains "Yammer") {
+                                    $sharedResources += "Yammer Community;"
+                                }
+                            }
+                            
+                            # Check for group behavior options
+                            $behaviorSettings = ""
+                            if ($group.resourceBehaviorOptions) {
+                                if ($group.resourceBehaviorOptions -contains "HideGroupInOutlook") {
+                                    $behaviorSettings += "Hidden from GAL;"
+                                }
+                                
+                                if ($group.resourceBehaviorOptions -contains "SubscribeNewGroupMembers") {
+                                    $behaviorSettings += "Auto-Subscribe Members;"
+                                }
+                                
+                                if ($group.resourceBehaviorOptions -contains "WelcomeEmailDisabled") {
+                                    $behaviorSettings += "No Welcome Email;"
+                                }
+                                
+                                if ($group.resourceBehaviorOptions -contains "AllowOnlyMembersToPost") {
+                                    $behaviorSettings += "Members-Only Posting;"
+                                }
+                            }
+                            
+                            # Get group type details with enhanced classification
+                            $groupTypeDetails = Get-GroupTypeInfo -Group $group
+                            $groupTypeStr = $groupTypeDetails.Types
+                            $groupClassification = $groupTypeDetails.Classification
+                            
+                            Write-Host -ForegroundColor Green ("[+] Found updatable group: " + $group.displayName + ": " + $group.id + " (Type: " + $groupTypeStr + ")")
+                            
+                            # Create the output object with all the information
+                            $groupout = [PSCustomObject]@{
+                                DisplayName = $group.displayName
+                                Id = $group.id
+                                Description = $group.description
+                                GroupTypes = ($group.groupTypes -join ", ")
+                                GroupType = $groupTypeStr
+                                GroupClassification = $groupClassification
+                                SecurityEnabled = $group.securityEnabled
+                                MailEnabled = $group.mailEnabled
+                                IsAssignableToRole = $group.isAssignableToRole
+                                OnPremisesSyncEnabled = $group.onPremisesSyncEnabled
+                                OnPremisesDetails = $onPremInfo
+                                TeamsConnected = $teamsConnected
+                                SharedResources = $sharedResources
+                                BehaviorSettings = $behaviorSettings
+                                Mail = $group.mail
+                                CreatedDateTime = $group.createdDateTime
+                                LastModifiedDateTime = $lastModified
+                                Visibility = $group.visibility
+                                MembershipRule = $group.membershipRule
+                                MembershipRuleProcessingState = $group.membershipRuleProcessingState
+                                Owners = ($owners -join "; ")
+                                OwnerCount = $owners.Count
+                                AppRoleAssignments = ($appRoles -join "; ")
+                                AppRoleCount = $appRoles.Count
+                                MemberOf = ($memberOf -join "; ")
+                                MemberOfCount = $memberOf.Count
+                                AddUserCommand = "Invoke-AddGroupMember -Tokens `$tokens -GroupID '$($group.id)' -UserID '$currentUserId'"
+                                RemoveUserCommand = "Invoke-RemoveGroupMember -Tokens `$tokens -GroupID '$($group.id)' -UserID '$currentUserId'"
+                                CurrentUserId = $currentUserId
+                                CurrentUserDisplayName = $currentUserDisplayName
+                                CurrentUserUPN = $currentUserUPN
+                            }
+                            
+                            # If requested, get group members
+                            if ($IncludeMembers) {
+                                try {
+                                    Add-RandomDelay -MinSeconds 1 -MaxSeconds 2
+                                    $membersUrl = "https://graph.microsoft.com/v1.0/groups/$($group.id)/members"
+                                    $members = Invoke-GraphRequestWithRetry -Uri $membersUrl -Headers $headers
+                                    
+                                    $membersList = @()
+                                    foreach ($member in $members.value) {
+                                        if ($member.'@odata.type' -eq '#microsoft.graph.user') {
+                                            $membersList += $member.userPrincipalName
+                                        } else {
+                                            $membersList += "$($member.displayName) ($($member.'@odata.type'))"
+                                        }
+                                    }
+                                    
+                                    # Handle pagination for members
+                                    $nextMembersLink = $members.'@odata.nextLink'
+                                    while ($nextMembersLink) {
+                                        Add-RandomDelay -MinSeconds 1 -MaxSeconds 2
+                                        $nextMembers = Invoke-GraphRequestWithRetry -Uri $nextMembersLink -Headers $headers
+                                        
+                                        foreach ($member in $nextMembers.value) {
+                                            if ($member.'@odata.type' -eq '#microsoft.graph.user') {
+                                                $membersList += $member.userPrincipalName
+                                            } else {
+                                                $membersList += "$($member.displayName) ($($member.'@odata.type'))"
+                                            }
+                                        }
+                                        
+                                        $nextMembersLink = $nextMembers.'@odata.nextLink'
+                                    }
+                                    
+                                    $groupout | Add-Member -NotePropertyName "Members" -NotePropertyValue ($membersList -join "; ")
+                                    $groupout | Add-Member -NotePropertyName "MemberCount" -NotePropertyValue $membersList.Count
+                                } catch {
+                                    Write-Host -ForegroundColor Yellow "[!] Could not retrieve members for group $($group.displayName): $_"
+                                    $groupout | Add-Member -NotePropertyName "Members" -NotePropertyValue "Error retrieving members"
+                                    $groupout | Add-Member -NotePropertyName "MemberCount" -NotePropertyValue 0
+                                }
+                            }
+                            
                             $results += $groupout
                         }
                     } catch {
                         Write-Host "Error estimating access for $groupid : $_"
                     }
+                    
+                    # Add a small delay between requests to avoid rate limiting
+                    Start-Sleep -Milliseconds (Get-Random -Minimum 100 -Maximum 500)
                 }
 
                 if ($response.'@odata.nextLink') {
@@ -4181,18 +4699,334 @@ function Get-UpdatableGroups{
         if ($results.Count -gt 0) {
             Write-Host -ForegroundColor Green ("[*] Found " + $results.Count + " groups that can be updated.")
 
+            # Create a summary file with just the basic information
+            $summaryFile = "$BaseReportName-summary.txt"
+            "# Updatable Groups Summary" | Out-File -FilePath $summaryFile -Force
+            "# Generated: $(Get-Date)" | Out-File -FilePath $summaryFile -Append
+            "# Total Updatable Groups: $($results.Count)" | Out-File -FilePath $summaryFile -Append
+            "# " | Out-File -FilePath $summaryFile -Append
+            "# Format: DisplayName | GroupID | GroupType" | Out-File -FilePath $summaryFile -Append
+            "# --------------------------------------------" | Out-File -FilePath $summaryFile -Append
+            
             foreach ($result in $results) {
+                "$($result.DisplayName) | $($result.Id) | $($result.GroupType)" | Out-File -FilePath $summaryFile -Append
+                
                 Write-Host ("=" * 80)
-                Write-Output $result
-
+                Write-Output "Display Name: $($result.DisplayName)"
+                Write-Output "Group ID: $($result.Id)"
+                Write-Output "Group Type: $($result.GroupType)"
+                Write-Output "Classification: $($result.GroupClassification)"
+                
+                if ($result.Description) {
+                    Write-Output "Description: $($result.Description)"
+                }
+                
+                if ($result.SecurityEnabled) {
+                    Write-Output "Security Enabled: $($result.SecurityEnabled)"
+                }
+                
+                if ($result.MailEnabled) {
+                    Write-Output "Mail Enabled: $($result.MailEnabled)"
+                }
+                
+                if ($result.IsAssignableToRole) {
+                    Write-Output "Assignable to Role: $($result.IsAssignableToRole)"
+                }
+                
+                if ($result.TeamsConnected) {
+                    Write-Output "Teams Connected: $($result.TeamsConnected)"
+                }
+                
+                if ($result.SharedResources) {
+                    Write-Output "Shared Resources: $($result.SharedResources)"
+                }
+                
+                if ($result.BehaviorSettings) {
+                    Write-Output "Behavior Settings: $($result.BehaviorSettings)"
+                }
+                
+                if ($result.Mail) {
+                    Write-Output "Mail: $($result.Mail)"
+                }
+                
+                Write-Output "Created: $($result.CreatedDateTime)"
+                Write-Output "Last Modified: $($result.LastModifiedDateTime)"
+                
+                if ($result.Visibility) {
+                    Write-Output "Visibility: $($result.Visibility)"
+                }
+                
+                if ($result.OnPremisesDetails) {
+                    Write-Output "On-Premises Info: $($result.OnPremisesDetails)"
+                }
+                
+                if ($result.MembershipRule) {
+                    Write-Output "Membership Rule: $($result.MembershipRule)"
+                    Write-Output "Membership Rule Processing State: $($result.MembershipRuleProcessingState)"
+                }
+                
+                # Show command to add current user to this group
+                Write-Host -ForegroundColor Cyan "Add Current User Command:"
+                Write-Host $result.AddUserCommand
+                
+                # Show command to remove current user from this group
+                Write-Host -ForegroundColor Cyan "Remove Current User Command:"
+                Write-Host $result.RemoveUserCommand
+                
+                # Show owners information
+                if ($result.OwnerCount -gt 0) {
+                    Write-Output "Owner Count: $($result.OwnerCount)"
+                    if ($result.OwnerCount -lt 10) {
+                        Write-Output "Owners: $($result.Owners)"
+                    } else {
+                        Write-Output "Owners: (Too many to display, see CSV output)"
+                    }
+                }
+                
+                # Show app role assignments
+                if ($result.AppRoleCount -gt 0) {
+                    Write-Output "App Role Assignments: $($result.AppRoleCount)"
+                    if ($result.AppRoleCount -lt 5) {
+                        Write-Output "App Roles: $($result.AppRoleAssignments)"
+                    } else {
+                        Write-Output "App Roles: (Too many to display, see CSV output)"
+                    }
+                }
+                
+                # Show groups that this group is a member of
+                if ($result.MemberOfCount -gt 0) {
+                    Write-Output "Member Of Count: $($result.MemberOfCount)"
+                    if ($result.MemberOfCount -lt 5) {
+                        Write-Output "Member Of: $($result.MemberOf)"
+                    } else {
+                        Write-Host -ForegroundColor Cyan "[!] This group is a member of $($result.MemberOfCount) other groups/roles (see CSV for details)"
+                    }
+                }
+                
+                # Show group members if requested
+                if ($IncludeMembers -and $result.PSObject.Properties.Name -contains "MemberCount") {
+                    Write-Output "Member Count: $($result.MemberCount)"
+                    if ($result.MemberCount -gt 0 -and $result.MemberCount -lt 20) {
+                        Write-Output "Members: $($result.Members)"
+                    } elseif ($result.MemberCount -ge 20) {
+                        Write-Output "Members: (Too many to display, see CSV output)"
+                    }
+                }
+                
                 Write-Host ("=" * 80)
             }
         }
 
-        if ($OutputFile) {
-            $results | Export-Csv -Path $OutputFile -NoTypeInformation
-            Write-Host -ForegroundColor Green ("[*] Exported updatable groups to $OutputFile")
+        # Export full detailed information to CSV with proper headers
+        $csvFile = "$BaseReportName.csv"
+        $results | Export-Csv -Path $csvFile -NoTypeInformation -Force
+        
+        Write-Host -ForegroundColor Green ("[*] Exported detailed updatable groups to $csvFile")
+        if (Test-Path $summaryFile) {
+            Write-Host -ForegroundColor Green ("[*] Exported summary information to $summaryFile")
         }
+        
+        # Create an HTML report for easier viewing if requested
+        if ($results.Count -gt 0) {
+            $htmlFile = "$BaseReportName.html"
+            $htmlHeader = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Updatable Groups Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #0066cc; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th { background-color: #0066cc; color: white; text-align: left; padding: 8px; position: sticky; top: 0; }
+        td { border: 1px solid #ddd; padding: 8px; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        tr:hover { background-color: #ddd; }
+        .warning { color: #cc3300; }
+        .info { color: #0066cc; }
+        .success { color: #009933; }
+        .command-cell { width: 1%; white-space: nowrap; }
+        .copy-btn { 
+            background-color: #4CAF50; 
+            border: none; 
+            color: white; 
+            padding: 5px 10px; 
+            text-align: center; 
+            text-decoration: none; 
+            display: inline-block; 
+            font-size: 12px; 
+            margin: 2px; 
+            cursor: pointer; 
+            border-radius: 4px;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 140px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 150%;
+            left: 50%;
+            margin-left: -75px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+    <script>
+        function copyToClipboard(elementId) {
+            var text = document.getElementById(elementId).getAttribute('data-command');
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    var tooltip = document.getElementById(elementId + "-tooltip");
+                    tooltip.innerHTML = "Copied!";
+                    setTimeout(function() {
+                        tooltip.innerHTML = "Copy command";
+                    }, 1500);
+                })
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                });
+        }
+        
+        function sortTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById("groupsTable");
+            switching = true;
+            dir = "asc";
+            
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    
+                    if (dir == "asc") {
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Updatable Groups Report</h1>
+    <p>Generated: $(Get-Date)</p>
+    <p>Current User: $($results[0].CurrentUserDisplayName) ($($results[0].CurrentUserUPN))</p>
+    <p>Total Updatable Groups: $($results.Count)</p>
+    <table id="groupsTable">
+        <tr>
+            <th class="command-cell">Commands</th>
+            <th onclick="sortTable(1)" style="cursor:pointer;">Display Name</th>
+            <th onclick="sortTable(2)" style="cursor:pointer;">Group Type</th>
+            <th onclick="sortTable(3)" style="cursor:pointer;">Classification</th>
+            <th onclick="sortTable(4)" style="cursor:pointer;">Description</th>
+            <th onclick="sortTable(5)" style="cursor:pointer;">Mail Enabled</th>
+            <th onclick="sortTable(6)" style="cursor:pointer;">Security Enabled</th>
+            <th onclick="sortTable(7)" style="cursor:pointer;">Owner Count</th>
+            <th onclick="sortTable(8)" style="cursor:pointer;">Member Count</th>
+            <th onclick="sortTable(9)" style="cursor:pointer;">Member Of</th>
+            <th onclick="sortTable(10)" style="cursor:pointer;">Created</th>
+            <th onclick="sortTable(11)" style="cursor:pointer;">Visibility</th>
+            <th onclick="sortTable(12)" style="cursor:pointer;">Email</th>
+        </tr>
+"@
+
+            $htmlRows = ""
+            $commandCounter = 1
+            foreach ($result in $results) {
+                $addCommandId = "add-command-$commandCounter"
+                $removeCommandId = "remove-command-$commandCounter"
+                $memberCount = if ($result.PSObject.Properties.Name -contains "MemberCount") { $result.MemberCount } else { "N/A" }
+                
+                $htmlRows += @"
+        <tr>
+            <td class="command-cell">
+                <div class="tooltip">
+                    <button class="copy-btn" onclick="copyToClipboard('$addCommandId')" id="$addCommandId" data-command="$($result.AddUserCommand)">Add</button>
+                    <span class="tooltiptext" id="$addCommandId-tooltip">Copy command</span>
+                </div>
+                <div class="tooltip">
+                    <button class="copy-btn" onclick="copyToClipboard('$removeCommandId')" id="$removeCommandId" data-command="$($result.RemoveUserCommand)" style="background-color: #f44336;">Remove</button>
+                    <span class="tooltiptext" id="$removeCommandId-tooltip">Copy command</span>
+                </div>
+            </td>
+            <td>$($result.DisplayName)</td>
+            <td>$($result.GroupType)</td>
+            <td>$($result.GroupClassification)</td>
+            <td>$($result.Description)</td>
+            <td>$($result.MailEnabled)</td>
+            <td>$($result.SecurityEnabled)</td>
+            <td>$($result.OwnerCount)</td>
+            <td>$memberCount</td>
+            <td>$($result.MemberOfCount)</td>
+            <td>$($result.CreatedDateTime)</td>
+            <td>$($result.Visibility)</td>
+            <td>$($result.Mail)</td>
+        </tr>
+"@
+                $commandCounter++
+            }
+
+            $htmlFooter = @"
+    </table>
+    <h2>Next Steps</h2>
+    <p>For more details, check the CSV file: $csvFile</p>
+    <p class="info">To add or remove yourself from a group, click the appropriate button in the Commands column.</p>
+    <p class="info">Click on column headers to sort the table.</p>
+</body>
+</html>
+"@
+
+            $htmlContent = $htmlHeader + $htmlRows + $htmlFooter
+            $htmlContent | Out-File -FilePath $htmlFile -Encoding utf8
+            Write-Host -ForegroundColor Green ("[*] Created HTML report for easier viewing: $htmlFile")
+        }
+        
+        return $results
     } catch {
         Write-Host -ForegroundColor Red "An error occurred: $_"
     }
