@@ -1,0 +1,3225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphRunner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom configuration for Tailwind CSS -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cyber-black': '#121212',
+                        'cyber-dark': '#1a1a1a',
+                        'cyber-gray': '#2a2a2a',
+                        'cyber-light': '#3a3a3a',
+                        'cyber-cyan': '#0ff',
+                        'cyber-purple': '#c961de',
+                        'cyber-blue': '#357EC7',
+                        'cyber-pink': '#ff7edb',
+                        'cyber-green': '#00ff9f',
+                        'cyber-yellow': '#ffff00',
+                        'cyber-red': '#ff5277'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome for additional icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #121212;
+            color: #ffffff;
+            scrollbar-width: thin;
+            scrollbar-color: #357EC7 #1a1a1a;
+        }
+        
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #357EC7;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0ff;
+        }
+        
+        /* Neon effects */
+        .text-neon-cyan {
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+        }
+        
+        .text-neon-purple {
+            color: #c961de;
+            text-shadow: 0 0 5px #c961de, 0 0 10px #c961de;
+        }
+        
+        .text-neon-blue {
+            color: #357EC7;
+            text-shadow: 0 0 5px #357EC7, 0 0 10px #357EC7;
+        }
+        
+        .text-neon-green {
+            color: #00ff9f;
+            text-shadow: 0 0 5px #00ff9f, 0 0 10px #00ff9f;
+        }
+        
+        .border-neon-cyan {
+            border-color: #0ff;
+            box-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+        }
+        
+        .border-neon-purple {
+            border-color: #c961de;
+            box-shadow: 0 0 5px #c961de, 0 0 10px #c961de;
+        }
+        
+        /* Glitch animation */
+        @keyframes glitch {
+            0% {
+                transform: translate(0);
+            }
+            20% {
+                transform: translate(-2px, 2px);
+            }
+            40% {
+                transform: translate(-2px, -2px);
+            }
+            60% {
+                transform: translate(2px, 2px);
+            }
+            80% {
+                transform: translate(2px, -2px);
+            }
+            100% {
+                transform: translate(0);
+            }
+        }
+        
+        .glitch:hover {
+            animation: glitch 0.3s linear infinite;
+        }
+        
+        /* Terminal-like output */
+        .terminal {
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid #357EC7;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .terminal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+        
+        /* Pulse animation */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 255, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 255, 0);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* For collapsible sections */
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .collapsed .collapsible-content {
+            max-height: 1000px;
+        }
+        
+        /* Custom button styles */
+        .cyber-button {
+            background: linear-gradient(to right, #357EC7, #c961de);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            cursor: pointer;
+        }
+        
+        .cyber-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+        }
+        
+        .cyber-button:active {
+            transform: translateY(1px);
+        }
+        
+        .cyber-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: all 0.5s;
+        }
+        
+        .cyber-button:hover::before {
+            left: 100%;
+        }
+        
+        /* Custom input and select styles */
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select,
+        textarea {
+            background-color: #1a1a1a;
+            border: 1px solid #357EC7;
+            color: white;
+            border-radius: 4px;
+            padding: 8px 12px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #0ff;
+            box-shadow: 0 0 5px #0ff;
+            outline: none;
+        }
+        
+        /* Response code styling */
+        .http-success {
+            color: #00ff9f;
+        }
+        
+        .http-redirect {
+            color: #ffff00;
+        }
+        
+        .http-client-error {
+            color: #ff5277;
+        }
+        
+        .http-server-error {
+            color: #ff5277;
+        }
+        
+        /* Loading animation */
+        @keyframes loading {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #0ff;
+            animation: loading 1s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-cyber-black text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl md:text-6xl mb-2 glitch text-neon-cyan">GraphRunner</h1>
+            <h2 class="text-xl md:text-2xl text-neon-blue">Advanced Microsoft Graph API Explorer</h2>
+            <div class="mt-4 text-cyber-purple text-sm">
+                <span class="inline-block border border-cyber-purple px-2 py-1 rounded">v2.0</span>
+                <span class="ml-2 inline-block border border-cyber-green px-2 py-1 rounded">[SYS:ONLINE]</span>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="space-y-8">
+            <!-- Token Input Section -->
+            <section class="bg-cyber-dark p-6 rounded-lg border border-cyber-blue shadow-lg">
+                <h3 class="text-xl mb-4 text-neon-blue flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    Authentication
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <label for="token" class="block mb-2 text-cyber-cyan">Access Token:</label>
+                            <input type="text" id="token" name="token" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan" required>
+                        </div>
+                        <div class="flex items-end">
+                            <button id="parseTokenButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-purple">
+                                <i class="fas fa-key mr-2"></i>Parse Token
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <div id="tokenStatus" class="text-cyber-yellow text-sm"></div>
+                        <pre id="jwtFields" class="terminal mt-4 hidden text-sm max-h-96 overflow-y-auto"></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Custom API Request Section -->
+            <section class="bg-cyber-dark p-6 rounded-lg border border-cyber-blue shadow-lg">
+                <h3 class="text-xl mb-4 text-neon-blue flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                    </svg>
+                    Custom API Request
+                </h3>
+                <form id="apiRequestForm" class="space-y-4">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <label for="apiEndpoint" class="block mb-2 text-cyber-cyan">API Endpoint:</label>
+                            <input type="text" id="apiEndpoint" name="apiEndpoint" value="https://graph.microsoft.com/v1.0/me" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan" required>
+                        </div>
+                        <div class="w-32">
+                            <label for="httpMethod" class="block mb-2 text-cyber-cyan">HTTP Method:</label>
+                            <select id="httpMethod" name="httpMethod" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="PATCH">PATCH</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="OPTIONS">OPTIONS</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="requestBodyContainer" class="hidden">
+                        <label for="requestBody" class="block mb-2 text-cyber-cyan">Request Body (JSON):</label>
+                        <textarea id="requestBody" name="requestBody" rows="4" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan font-mono"></textarea>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <button type="submit" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                            <i class="fas fa-paper-plane mr-2"></i>Send Request
+                        </button>
+                        <div id="apiRequestStatus" class="text-cyber-yellow"></div>
+                    </div>
+                </form>
+                
+                <div class="mt-4 relative">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="text-cyber-cyan">Response</h4>
+                        <div id="responseStatusDisplay" class="px-3 py-1 rounded text-xs"></div>
+                    </div>
+                    <pre id="apiResponse" class="terminal text-sm h-96 overflow-auto"></pre>
+                    <button id="copyResponseBtn" class="absolute top-8 right-2 bg-cyber-gray text-cyber-cyan p-1 rounded hover:bg-cyber-light" title="Copy to clipboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Directory Section -->
+            <section class="bg-cyber-dark p-6 rounded-lg border border-cyber-blue shadow-lg">
+                <div class="flex flex-wrap items-center justify-between mb-4">
+                    <h3 class="text-xl text-neon-blue flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Directory Explorer
+                    </h3>
+                    <div>
+                        <button id="directoryTabsToggle" class="text-cyber-cyan hover:text-cyber-green text-sm border border-cyber-cyan px-3 py-1 rounded hover:border-cyber-green">
+                            <i class="fas fa-exchange-alt mr-1"></i>Toggle View
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Directory Tabs -->
+                <div class="mb-4 border-b border-cyber-blue">
+                    <div class="flex flex-wrap">
+                        <button id="usersTab" class="text-cyber-cyan border-b-2 border-cyber-cyan px-4 py-2 focus:outline-none directory-tab active-tab">
+                            <i class="fas fa-user mr-2"></i>Users
+                        </button>
+                        <button id="groupsTab" class="text-white hover:text-cyber-cyan px-4 py-2 focus:outline-none directory-tab">
+                            <i class="fas fa-users mr-2"></i>Groups
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Directory Content -->
+                <div id="directoryContent">
+                    <!-- Users Tab Content -->
+                    <div id="usersTabContent" class="directory-content">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> User.ReadBasic.All, User.Read.All, User.ReadWrite.All, Directory.Read.All, or Directory.ReadWrite.All
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button id="listUsersButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                <i class="fas fa-list mr-2"></i>List Users
+                            </button>
+                            <button id="exportUsersButton" class="cyber-button bg-gradient-to-r from-cyber-purple to-cyber-blue">
+                                <i class="fas fa-file-export mr-2"></i>Export
+                            </button>
+                            <div id="usersLoadingStatus" class="text-cyber-yellow"></div>
+                        </div>
+                        
+                        <pre id="listUsersResponse" class="terminal h-96 overflow-auto text-sm"></pre>
+                    </div>
+
+                    <!-- Groups Tab Content -->
+                    <div id="groupsTabContent" class="directory-content hidden">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> GroupMember.Read.All, Group.Read.All, Directory.Read.All, Group.ReadWrite.All, or Directory.ReadWrite.All
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button id="listGroupsButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                <i class="fas fa-list mr-2"></i>List Groups
+                            </button>
+                            <button id="exportGroupsButton" class="cyber-button bg-gradient-to-r from-cyber-purple to-cyber-blue">
+                                <i class="fas fa-file-export mr-2"></i>Export
+                            </button>
+                            <div id="groupsLoadingStatus" class="text-cyber-yellow"></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-1">
+                                <h4 class="text-cyber-cyan mb-2">Groups</h4>
+                                <div id="groupList" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <h4 class="text-cyber-cyan mb-2">Group Members</h4>
+                                <div id="groupMembers" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Email Explorer Section -->
+            <section class="bg-cyber-dark p-6 rounded-lg border border-cyber-blue shadow-lg">
+                <div class="flex flex-wrap items-center justify-between mb-4">
+                    <h3 class="text-xl text-neon-blue flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Email Explorer
+                    </h3>
+                    <div>
+                        <button id="emailTabsToggle" class="text-cyber-cyan hover:text-cyber-green text-sm border border-cyber-cyan px-3 py-1 rounded hover:border-cyber-green">
+                            <i class="fas fa-exchange-alt mr-1"></i>Toggle View
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Email Tabs -->
+                <div class="mb-4 border-b border-cyber-blue">
+                    <div class="flex flex-wrap">
+                        <button id="myEmailsTab" class="text-cyber-cyan border-b-2 border-cyber-cyan px-4 py-2 focus:outline-none email-tab active-tab">
+                            <i class="fas fa-inbox mr-2"></i>My Emails
+                        </button>
+                        <button id="otherEmailsTab" class="text-white hover:text-cyber-cyan px-4 py-2 focus:outline-none email-tab">
+                            <i class="fas fa-user-friends mr-2"></i>Other Users
+                        </button>
+                        <button id="sendEmailTab" class="text-white hover:text-cyber-cyan px-4 py-2 focus:outline-none email-tab">
+                            <i class="fas fa-paper-plane mr-2"></i>Send Email
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Email Content -->
+                <div id="emailContent">
+                    <!-- My Emails Tab Content -->
+                    <div id="myEmailsTabContent" class="email-content">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Mail.ReadBasic, Mail.Read, or Mail.ReadWrite
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 mb-4">
+                            <button id="fetchEmailsButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                <i class="fas fa-sync-alt mr-2"></i>Fetch Emails
+                            </button>
+                            <button id="exportEmailsButton" class="cyber-button bg-gradient-to-r from-cyber-purple to-cyber-blue">
+                                <i class="fas fa-file-export mr-2"></i>Export
+                            </button>
+                            <div class="flex-1 md:flex-none md:w-1/3">
+                                <div class="relative">
+                                    <input type="text" id="searchInput" placeholder="Search emails..." class="w-full pl-10 pr-4 py-2 bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="searchButton" class="cyber-button bg-gradient-to-r from-cyber-green to-cyber-blue">
+                                <i class="fas fa-search mr-2"></i>Search
+                            </button>
+                            <div id="emailsLoadingStatus" class="text-cyber-yellow"></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-1">
+                                <h4 class="text-cyber-cyan mb-2">Email List</h4>
+                                <div id="emailList" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <h4 class="text-cyber-cyan mb-2">Email Content</h4>
+                                <div id="emailDetail" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Other Users Emails Tab Content -->
+                    <div id="otherEmailsTabContent" class="email-content hidden">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Mail.Read.Shared or Mail.ReadWrite.Shared
+                        </div>
+                        
+                        <form id="customEmailViewerForm" class="space-y-4 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="customUserId" class="block mb-2 text-cyber-cyan">User ID:</label>
+                                    <input type="text" id="customUserId" name="customUserId" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan" required>
+                                </div>
+                                <div>
+                                    <label for="customFolder" class="block mb-2 text-cyber-cyan">Folder:</label>
+                                    <input type="text" id="customFolder" name="customFolder" value="Inbox" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan" required>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2">
+                                <button type="submit" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                    <i class="fas fa-sync-alt mr-2"></i>Fetch Emails
+                                </button>
+                                <div id="otherEmailsLoadingStatus" class="text-cyber-yellow"></div>
+                            </div>
+                        </form>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-1">
+                                <h4 class="text-cyber-cyan mb-2">Email List</h4>
+                                <div id="customEmailList" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <h4 class="text-cyber-cyan mb-2">Email Content</h4>
+                                <div id="customEmailDetail" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Send Email Tab Content -->
+                    <div id="sendEmailTabContent" class="email-content hidden">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Mail.Send
+                        </div>
+                        
+                        <form id="sendEmailForm" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="to" class="block mb-2 text-cyber-cyan">To:</label>
+                                    <input type="text" id="to" name="to" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan" required>
+                                </div>
+                                <div>
+                                    <label for="subject" class="block mb-2 text-cyber-cyan">Subject:</label>
+                                    <input type="text" id="subject" name="subject" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan" required>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="body" class="block mb-2 text-cyber-cyan">Body:</label>
+                                <textarea id="body" name="body" rows="6" class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan" required></textarea>
+                            </div>
+                            
+                            <div>
+                                <label for="attachments" class="block mb-2 text-cyber-cyan">Attachments:</label>
+                                <input type="file" id="attachments" name="attachments" multiple class="w-full bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan p-2">
+                            </div>
+                            
+                            <div class="flex items-center gap-4">
+                                <button type="submit" class="cyber-button bg-gradient-to-r from-cyber-green to-cyber-blue">
+                                    <i class="fas fa-paper-plane mr-2"></i>Send Email
+                                </button>
+                                <div id="sendEmailStatus" class="text-cyber-yellow"></div>
+                            </div>
+                        </form>
+                        
+                        <div id="emailSuccessMessage" class="mt-4 text-cyber-green hidden"></div>
+                        <div id="emailErrorMessage" class="mt-4 text-cyber-red hidden"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Teams Chat Explorer Section -->
+            <section class="bg-cyber-dark p-6 rounded-lg border border-cyber-blue shadow-lg">
+                <div class="flex flex-wrap items-center justify-between mb-4">
+                    <h3 class="text-xl text-neon-blue flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                        </svg>
+                        Teams Chat Explorer
+                    </h3>
+                    <div>
+                        <button id="teamsTabsToggle" class="text-cyber-cyan hover:text-cyber-green text-sm border border-cyber-cyan px-3 py-1 rounded hover:border-cyber-green">
+                            <i class="fas fa-exchange-alt mr-1"></i>Toggle View
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Teams Tabs -->
+                <div class="mb-4 border-b border-cyber-blue">
+                    <div class="flex flex-wrap">
+                        <button id="directChatsTab" class="text-cyber-cyan border-b-2 border-cyber-cyan px-4 py-2 focus:outline-none teams-tab active-tab">
+                            <i class="fas fa-comments mr-2"></i>Direct Chats
+                        </button>
+                        <button id="channelsTab" class="text-white hover:text-cyber-cyan px-4 py-2 focus:outline-none teams-tab">
+                            <i class="fas fa-users mr-2"></i>Channels
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Teams Content -->
+                <div id="teamsContent">
+                    <!-- Direct Chats Tab Content -->
+                    <div id="directChatsTabContent" class="teams-content">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Chat.ReadBasic, Chat.Read, or Chat.ReadWrite
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 mb-4">
+                            <button id="fetchChatsButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                <i class="fas fa-sync-alt mr-2"></i>Fetch Teams Chats
+                            </button>
+                            <div id="chatsLoadingStatus" class="text-cyber-yellow"></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-1">
+                                <h4 class="text-cyber-cyan mb-2">Chat List</h4>
+                                <div id="chatList" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <h4 class="text-cyber-cyan mb-2">Chat Messages</h4>
+                                <div id="chatMessages" class="terminal h-96 overflow-auto text-sm"></div>
+                                
+                                <div class="mt-4">
+                                    <h5 class="text-cyber-cyan mb-2">Send Message</h5>
+                                    <div class="text-xs text-cyber-pink mb-2">
+                                        <strong>Required Permissions:</strong> ChatMessage.Send or Chat.ReadWrite
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="messageTextBox" placeholder="Type your message..." class="flex-1 bg-cyber-gray border border-cyber-blue focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan">
+                                        <button id="sendMessageButton" class="cyber-button bg-gradient-to-r from-cyber-green to-cyber-blue" disabled>
+                                            <i class="fas fa-paper-plane mr-2"></i>Send
+                                        </button>
+                                    </div>
+                                    <div id="sendMessageStatus" class="mt-2 text-cyber-yellow"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Channels Tab Content -->
+                    <div id="channelsTabContent" class="teams-content hidden">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Team.ReadBasic.All, TeamSettings.Read.All, TeamSettings.ReadWrite.All, User.Read.All, or User.ReadWrite.All
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 mb-4">
+                            <button id="listPublicChatsButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                <i class="fas fa-list mr-2"></i>List Channels
+                            </button>
+                            <div id="channelsLoadingStatus" class="text-cyber-yellow"></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-1">
+                                <h4 class="text-cyber-cyan mb-2">Channel List</h4>
+                                <div id="publicChatList" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <h4 class="text-cyber-cyan mb-2">Channel Messages</h4>
+                                <div id="publicChatMessages" class="terminal h-96 overflow-auto text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- File Explorer Section -->
+            <section class="bg-cyber-dark p-6 rounded-lg border border-cyber-blue shadow-lg">
+                <div class="flex flex-wrap items-center justify-between mb-4">
+                    <h3 class="text-xl text-neon-blue flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+                        </svg>
+                        File Explorer
+                    </h3>
+                    <div>
+                        <button id="fileTabsToggle" class="text-cyber-cyan hover:text-cyber-green text-sm border border-cyber-cyan px-3 py-1 rounded hover:border-cyber-green">
+                            <i class="fas fa-exchange-alt mr-1"></i>Toggle View
+                        </button>
+                    </div>
+                </div>
+
+                <!-- File Tabs -->
+                <div class="mb-4 border-b border-cyber-blue">
+                    <div class="flex flex-wrap">
+                        <button id="myFilesTab" class="text-cyber-cyan border-b-2 border-cyber-cyan px-4 py-2 focus:outline-none files-tab active-tab">
+                            <i class="fas fa-folder mr-2"></i>My Files
+                        </button>
+                        <button id="sharedFilesTab" class="text-white hover:text-cyber-cyan px-4 py-2 focus:outline-none files-tab">
+                            <i class="fas fa-share-alt mr-2"></i>Shared Files
+                        </button>
+                        <button id="sharepointTab" class="text-white hover:text-cyber-cyan px-4 py-2 focus:outline-none files-tab">
+                            <i class="fas fa-sitemap mr-2"></i>SharePoint
+                        </button>
+                    </div>
+                </div>
+
+                <!-- File Content -->
+                <div id="fileContent">
+                    <!-- My Files Tab Content -->
+                    <div id="myFilesTabContent" class="files-content">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Files.Read, Files.ReadWrite, Files.Read.All, Files.ReadWrite.All, Sites.Read.All, or Sites.ReadWrite.All
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 mb-4">
+                            <button id="listFilesButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                <i class="fas fa-list mr-2"></i>List Files
+                            </button>
+                            <div id="myFilesLoadingStatus" class="text-cyber-yellow"></div>
+                        </div>
+                        
+                        <div id="fileList" class="terminal h-96 overflow-auto text-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4"></div>
+                    </div>
+
+                    <!-- Shared Files Tab Content -->
+                    <div id="sharedFilesTabContent" class="files-content hidden">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Files.Read, Files.ReadWrite, Files.Read.All, Files.ReadWrite.All, Sites.Read.All, or Sites.ReadWrite.All
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 mb-4">
+                            <button id="listSharedFilesButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                <i class="fas fa-list mr-2"></i>List Shared Files
+                            </button>
+                            <div id="sharedFilesLoadingStatus" class="text-cyber-yellow"></div>
+                        </div>
+                        
+                        <div id="sharedFileList" class="terminal h-96 overflow-auto text-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4"></div>
+                    </div>
+
+                    <!-- SharePoint Tab Content -->
+                    <div id="sharepointTabContent" class="files-content hidden">
+                        <div class="text-sm text-cyber-pink mb-2">
+                            <strong>Required Permissions:</strong> Sites.Read.All or Sites.ReadWrite.All AND Files.Read, Files.ReadWrite, Files.Read.All, or Files.ReadWrite.All
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2 mb-2">
+                                    <button id="listDrivesButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                        <i class="fas fa-hdd mr-2"></i>List Root Drives
+                                    </button>
+                                    <div id="drivesLoadingStatus" class="text-cyber-yellow"></div>
+                                </div>
+                                <h4 class="text-cyber-cyan mb-2">Drive List</h4>
+                                <div id="driveList" class="terminal h-40 overflow-auto text-sm"></div>
+                                <h4 class="text-cyber-cyan mb-2 mt-4">Files & Folders</h4>
+                                <div id="sharePointDriveFileList" class="terminal h-40 overflow-auto text-sm"></div>
+                            </div>
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2 mb-2">
+                                    <button id="listSitesButton" class="cyber-button bg-gradient-to-r from-cyber-blue to-cyber-cyan">
+                                        <i class="fas fa-globe mr-2"></i>List Sites
+                                    </button>
+                                    <div id="sitesLoadingStatus" class="text-cyber-yellow"></div>
+                                </div>
+                                <h4 class="text-cyber-cyan mb-2">Site List</h4>
+                                <div id="siteList" class="terminal h-40 overflow-auto text-sm"></div>
+                                <h4 class="text-cyber-cyan mb-2 mt-4">Files & Folders</h4>
+                                <div id="sharePointfileList" class="terminal h-40 overflow-auto text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center text-sm text-cyber-gray">
+            <p>GraphRunner | Microsoft Graph API Explorer</p>
+            <p class="mt-2">&copy; 2025 - A Cyberpunk Exploration Tool</p>
+        </footer>
+    </div>
+
+    <!-- Script -->
+    <script>
+        // Constants and DOM Elements
+        const tokenInput = document.getElementById('token');
+        const apiRequestForm = document.getElementById('apiRequestForm');
+        const apiResponse = document.getElementById('apiResponse');
+        const httpMethod = document.getElementById('httpMethod');
+        const requestBodyContainer = document.getElementById('requestBodyContainer');
+        const responseStatusDisplay = document.getElementById('responseStatusDisplay');
+        const parseTokenButton = document.getElementById('parseTokenButton');
+        const jwtFields = document.getElementById('jwtFields');
+        const copyResponseBtn = document.getElementById('copyResponseBtn');
+        const apiRequestStatus = document.getElementById('apiRequestStatus');
+        const tokenStatus = document.getElementById('tokenStatus');
+
+        // Tab system initialization
+        function initTabSystem(tabClass, contentClass, activeTabClass = 'active-tab') {
+            const tabs = document.querySelectorAll(`.${tabClass}`);
+            const contents = document.querySelectorAll(`.${contentClass}`);
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => {
+                        t.classList.remove('border-cyber-cyan', activeTabClass);
+                        t.classList.remove('text-cyber-cyan');
+                        t.classList.add('text-white', 'hover:text-cyber-cyan');
+                    });
+                    
+                    // Add active class to clicked tab
+                    tab.classList.add('border-b-2', 'border-cyber-cyan', activeTabClass);
+                    tab.classList.remove('text-white', 'hover:text-cyber-cyan');
+                    tab.classList.add('text-cyber-cyan');
+                    
+                    // Hide all content
+                    contents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    
+                    // Show corresponding content
+                    const contentId = tab.id.replace('Tab', 'TabContent');
+                    document.getElementById(contentId).classList.remove('hidden');
+                });
+            });
+        }
+
+        // Initialize all tab systems
+        initTabSystem('directory-tab', 'directory-content');
+        initTabSystem('email-tab', 'email-content');
+        initTabSystem('teams-tab', 'teams-content');
+        initTabSystem('files-tab', 'files-content');
+
+        // Initialize toggle buttons for responsive design
+        function initToggleButtons() {
+            const toggleButtons = [
+                { id: 'directoryTabsToggle', contentId: 'directoryContent' },
+                { id: 'emailTabsToggle', contentId: 'emailContent' },
+                { id: 'teamsTabsToggle', contentId: 'teamsContent' },
+                { id: 'fileTabsToggle', contentId: 'fileContent' }
+            ];
+            
+            toggleButtons.forEach(button => {
+                document.getElementById(button.id).addEventListener('click', () => {
+                    const content = document.getElementById(button.contentId);
+                    content.classList.toggle('md:flex');
+                    content.classList.toggle('md:flex-wrap');
+                    
+                    const tabContents = content.querySelectorAll('div[id$="TabContent"]');
+                    tabContents.forEach(tabContent => {
+                        tabContent.classList.toggle('hidden');
+                        tabContent.classList.toggle('md:w-1/2');
+                        tabContent.classList.toggle('md:px-2');
+                    });
+                });
+            });
+        }
+        initToggleButtons();
+
+        // HTTP method change handler
+        httpMethod.addEventListener('change', function() {
+            const method = this.value;
+            if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+                requestBodyContainer.classList.remove('hidden');
+            } else {
+                requestBodyContainer.classList.add('hidden');
+            }
+        });
+
+        // Copy response to clipboard
+        copyResponseBtn.addEventListener('click', () => {
+            const text = apiResponse.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalContent = copyResponseBtn.innerHTML;
+                copyResponseBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                `;
+                setTimeout(() => {
+                    copyResponseBtn.innerHTML = originalContent;
+                }, 2000);
+            });
+        });
+        
+        // Parse JWT token
+        parseTokenButton.addEventListener('click', async function() {
+            const jwt = tokenInput.value.trim();
+            
+            if (!jwt) {
+                tokenStatus.textContent = 'Please enter a valid token';
+                return;
+            }
+            
+            tokenStatus.innerHTML = '<div class="loading-spinner"></div> Parsing token...';
+            
+            try {
+                // Parse the JWT payload (second part of the JWT)
+                const payloadBase64 = jwt.split('.')[1];
+                const decodedPayload = atob(payloadBase64);
+                const payload = JSON.parse(decodedPayload);
+
+                // Extract the desired fields
+                const extractedFields = {
+                    Audience: payload.aud,
+                    Issuer: payload.iss,
+                    ExpirationTime: new Date(payload.exp * 1000).toLocaleString(),
+                    AppDisplayName: payload.app_displayname,
+                    AppID: payload.appid,
+                    Name: payload.name,
+                    UserPrincipalName: payload.upn,
+                    Scope: payload.scp,
+                    TenantID: payload.tid
+                };
+
+                // Create extracted fields display with cyberpunk styling
+                jwtFields.innerHTML = '';
+                jwtFields.classList.remove('hidden');
+                
+                const expiryDate = new Date(payload.exp * 1000);
+                const now = new Date();
+                const isExpired = expiryDate < now;
+                
+                // Add token status
+                const tokenStatusHtml = `
+                    <div class="flex justify-between items-center mb-4 border-b border-cyber-blue pb-2">
+                        <span class="text-cyber-cyan">Token Status:</span>
+                        <span class="${isExpired ? 'text-cyber-red' : 'text-cyber-green'}">${isExpired ? 'EXPIRED' : 'VALID'}</span>
+                    </div>
+                `;
+                jwtFields.innerHTML += tokenStatusHtml;
+                
+                // Add token expiry countdown
+                if (!isExpired) {
+                    const timeRemaining = Math.floor((expiryDate - now) / 1000);
+                    const hours = Math.floor(timeRemaining / 3600);
+                    const minutes = Math.floor((timeRemaining % 3600) / 60);
+                    const seconds = timeRemaining % 60;
+                    
+                    const expiryHtml = `
+                        <div class="flex justify-between items-center mb-4 border-b border-cyber-blue pb-2">
+                            <span class="text-cyber-cyan">Expires In:</span>
+                            <span class="text-cyber-yellow">${hours}h ${minutes}m ${seconds}s</span>
+                        </div>
+                    `;
+                    jwtFields.innerHTML += expiryHtml;
+                }
+                
+                // Add all other fields
+                for (const field in extractedFields) {
+                    if (extractedFields[field]) {
+                        const fieldHtml = `
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-cyber-cyan">${field}:</span>
+                                <span class="text-white break-all">${extractedFields[field]}</span>
+                            </div>
+                        `;
+                        jwtFields.innerHTML += fieldHtml;
+                    }
+                }
+                
+                // Add scopes in a more readable format
+                if (payload.scp) {
+                    const scopes = payload.scp.split(' ');
+                    const scopesHtml = `
+                        <div class="mt-4 border-t border-cyber-blue pt-2">
+                            <div class="text-cyber-cyan mb-2">Granted Scopes:</div>
+                            <div class="flex flex-wrap gap-2">
+                                ${scopes.map(scope => `<span class="bg-cyber-blue bg-opacity-30 px-2 py-1 rounded text-xs">${scope}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                    jwtFields.innerHTML += scopesHtml;
+                }
+                
+                tokenStatus.textContent = 'Token parsed successfully';
+                
+                // Start token expiry countdown if valid
+                if (!isExpired) {
+                    startExpiryCountdown(expiryDate);
+                }
+            } catch (error) {
+                jwtFields.innerHTML = `<div class="text-cyber-red">Error parsing token: ${error.message}</div>`;
+                tokenStatus.textContent = 'Failed to parse token';
+            }
+        });
+
+        // Start token expiry countdown
+        function startExpiryCountdown(expiryDate) {
+            const countdownInterval = setInterval(() => {
+                const now = new Date();
+                const timeRemaining = Math.floor((expiryDate - now) / 1000);
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(countdownInterval);
+                    parseTokenButton.click(); // Re-parse to show expired status
+                    return;
+                }
+                
+                const hours = Math.floor(timeRemaining / 3600);
+                const minutes = Math.floor((timeRemaining % 3600) / 60);
+                const seconds = timeRemaining % 60;
+                
+                const countdownElement = jwtFields.querySelector('.text-cyber-yellow');
+                if (countdownElement) {
+                    countdownElement.textContent = `${hours}h ${minutes}m ${seconds}s`;
+                    
+                    // Add pulse effect when less than 5 minutes remaining
+                    if (timeRemaining < 300) {
+                        countdownElement.classList.add('text-cyber-red');
+                        countdownElement.classList.add('pulse');
+                    }
+                }
+            }, 1000);
+        }
+
+        // Function to set HTTP status display based on response code
+        function setStatusDisplay(statusCode) {
+            responseStatusDisplay.textContent = `Status: ${statusCode}`;
+            
+            if (statusCode >= 200 && statusCode < 300) {
+                responseStatusDisplay.className = 'px-3 py-1 rounded text-xs bg-cyber-green text-black';
+            } else if (statusCode >= 300 && statusCode < 400) {
+                responseStatusDisplay.className = 'px-3 py-1 rounded text-xs bg-cyber-yellow text-black';
+            } else if (statusCode >= 400 && statusCode < 500) {
+                responseStatusDisplay.className = 'px-3 py-1 rounded text-xs bg-cyber-red text-black';
+            } else if (statusCode >= 500) {
+                responseStatusDisplay.className = 'px-3 py-1 rounded text-xs bg-cyber-red text-black';
+            } else {
+                responseStatusDisplay.className = 'px-3 py-1 rounded text-xs bg-cyber-gray text-white';
+            }
+        }
+
+        // Custom API Request Form Submit
+        apiRequestForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const token = tokenInput.value;
+            if (!token) {
+                apiRequestStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            const apiEndpoint = document.getElementById('apiEndpoint').value;
+            const httpMethod = document.getElementById('httpMethod').value;
+            
+            apiRequestStatus.innerHTML = '<div class="loading-spinner"></div> Sending request...';
+            apiResponse.textContent = '';
+            responseStatusDisplay.textContent = '';
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
+            
+            // Check if POST or PUT method selected
+            let requestBody = null;
+            if (httpMethod === 'POST' || httpMethod === 'PUT' || httpMethod === 'PATCH') {
+                requestBody = document.getElementById('requestBody').value;
+                if (requestBody) {
+                    try {
+                        // Try to parse JSON to validate
+                        JSON.parse(requestBody);
+                        headers['Content-Type'] = 'application/json';
+                    } catch (e) {
+                        apiRequestStatus.textContent = 'Invalid JSON in request body';
+                        return;
+                    }
+                }
+            }
+            
+            try {
+                const requestOptions = {
+                    method: httpMethod,
+                    headers
+                };
+                
+                if (requestBody) {
+                    requestOptions.body = requestBody;
+                }
+                
+                const startTime = performance.now();
+                const response = await fetch(apiEndpoint, requestOptions);
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+                
+                setStatusDisplay(response.status);
+                
+                try {
+                    const data = await response.json();
+                    const formattedJson = JSON.stringify(data, null, 2);
+                    
+                    // Create response header with metadata
+                    const responseHeader = `// Status: ${response.status} ${response.statusText}\n` +
+                                        `// Time: ${responseTime}ms\n` +
+                                        `// Size: ${new TextEncoder().encode(formattedJson).length} bytes\n\n`;
+                    
+                    apiResponse.textContent = responseHeader + formattedJson;
+                } catch (e) {
+                    // If response is not JSON
+                    const text = await response.text();
+                    apiResponse.textContent = `// Status: ${response.status} ${response.statusText}\n` +
+                                           `// Time: ${responseTime}ms\n` +
+                                           `// Size: ${text.length} bytes\n\n` +
+                                           text;
+                }
+                
+                apiRequestStatus.textContent = `Request completed in ${responseTime}ms`;
+            } catch (error) {
+                apiResponse.textContent = `Error: ${error.message}`;
+                responseStatusDisplay.textContent = 'Failed';
+                responseStatusDisplay.className = 'px-3 py-1 rounded text-xs bg-cyber-red text-black';
+                apiRequestStatus.textContent = 'Request failed';
+            }
+        });
+        
+        // Users and Groups Functions
+        const listUsersButton = document.getElementById('listUsersButton');
+        const listUsersResponse = document.getElementById('listUsersResponse');
+        const exportUsersButton = document.getElementById('exportUsersButton');
+        const usersLoadingStatus = document.getElementById('usersLoadingStatus');
+        
+        // List Users
+        listUsersButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                usersLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            usersLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading users...';
+            listUsersResponse.textContent = '';
+            
+            try {
+                const allUsers = await fetchAllUsers(token);
+                
+                // Display userPrincipalName fields with enhanced formatting
+                const userPrincipalNames = allUsers.map(user => user.userPrincipalName);
+                
+                // Create fancy cyberpunk user list
+                listUsersResponse.innerHTML = '';
+                if (userPrincipalNames.length === 0) {
+                    listUsersResponse.innerHTML = '<div class="text-cyber-yellow">No users found</div>';
+                } else {
+                    userPrincipalNames.forEach((user, index) => {
+                        const userElement = document.createElement('div');
+                        userElement.className = 'p-2 hover:bg-cyber-gray rounded mb-1 flex items-center';
+                        userElement.innerHTML = `
+                            <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                            <span class="text-white">${user}</span>
+                        `;
+                        listUsersResponse.appendChild(userElement);
+                    });
+                }
+                
+                // Store userPrincipalNames for exporting
+                window.userPrincipalNamesForExport = userPrincipalNames;
+                usersLoadingStatus.textContent = `Loaded ${userPrincipalNames.length} users`;
+            } catch (error) {
+                listUsersResponse.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                usersLoadingStatus.textContent = 'Failed to load users';
+            }
+        });
+        
+        // Function to fetch all users using pagination
+        async function fetchAllUsers(token) {
+            const initialUrl = 'https://graph.microsoft.com/v1.0/users';
+            let allUsers = [];
+            let url = initialUrl;
+            
+            try {
+                while (url) {
+                    const response = await fetch(url, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.value) {
+                        allUsers = allUsers.concat(data.value);
+                    }
+                    
+                    url = data['@odata.nextLink'];
+                }
+                
+                return allUsers;
+            } catch (error) {
+                throw new Error(`Failed to fetch users: ${error.message}`);
+            }
+        }
+        
+        // Export Users
+        exportUsersButton.addEventListener('click', function() {
+            if (!window.userPrincipalNamesForExport || window.userPrincipalNamesForExport.length === 0) {
+                usersLoadingStatus.textContent = 'No user data available for export';
+                return;
+            }
+            
+            const userText = window.userPrincipalNamesForExport.join('\n');
+            const blob = new Blob([userText], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'users.txt';
+            a.click();
+            
+            usersLoadingStatus.textContent = `Exported ${window.userPrincipalNamesForExport.length} users`;
+        });
+        
+        // Groups functionality
+        const listGroupsButton = document.getElementById('listGroupsButton');
+        const exportGroupsButton = document.getElementById('exportGroupsButton');
+        const groupList = document.getElementById('groupList');
+        const groupMembers = document.getElementById('groupMembers');
+        const groupsLoadingStatus = document.getElementById('groupsLoadingStatus');
+        
+        // List Groups
+        listGroupsButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                groupsLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            groupsLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading groups...';
+            groupList.innerHTML = '';
+            groupMembers.innerHTML = '';
+            
+            try {
+                const groups = await listGroups(token);
+                
+                if (groups.length === 0) {
+                    groupList.innerHTML = '<div class="text-cyber-yellow">No groups found</div>';
+                } else {
+                    groups.forEach((group, index) => {
+                        const groupElement = document.createElement('div');
+                        groupElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        groupElement.dataset.id = group.id;
+                        
+                        groupElement.innerHTML = `
+                            <div class="flex items-center">
+                                <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                                <span class="text-cyber-cyan font-bold">${group.displayName}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1">ID: ${group.id}</div>
+                        `;
+                        
+                        groupElement.addEventListener('click', async () => {
+                            const elements = document.querySelectorAll('#groupList > div');
+                            elements.forEach(el => el.classList.remove('bg-cyber-gray', 'border-cyber-cyan'));
+                            groupElement.classList.add('bg-cyber-gray', 'border-cyber-cyan');
+                            
+                            await fetchAndDisplayGroupMembers(group.id, token);
+                        });
+                        
+                        groupList.appendChild(groupElement);
+                    });
+                }
+                
+                groupsLoadingStatus.textContent = `Loaded ${groups.length} groups`;
+            } catch (error) {
+                groupList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                groupsLoadingStatus.textContent = 'Failed to load groups';
+            }
+        });
+        
+        // Function to list groups
+        async function listGroups(token) {
+            const groupApiEndpoint = 'https://graph.microsoft.com/v1.0/groups';
+            
+            try {
+                const response = await fetch(groupApiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                return data.value || [];
+            } catch (error) {
+                throw new Error(`Failed to fetch groups: ${error.message}`);
+            }
+        }
+        
+        // Fetch and display group members
+        async function fetchAndDisplayGroupMembers(groupId, token) {
+            groupsLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading members...';
+            groupMembers.innerHTML = '';
+            
+            try {
+                const members = await fetchGroupMembers(groupId, token);
+                
+                if (members.length === 0) {
+                    groupMembers.innerHTML = '<div class="text-cyber-yellow">No members found in this group</div>';
+                } else {
+                    // Store for export
+                    window.currentGroupMembers = members;
+                    
+                    members.forEach((member, index) => {
+                        const memberElement = document.createElement('div');
+                        memberElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2';
+                        
+                        memberElement.innerHTML = `
+                            <div class="flex items-center">
+                                <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                                <span class="text-white font-bold">${member.displayName}</span>
+                            </div>
+                            <div class="text-cyber-cyan mt-1">${member.userPrincipalName || 'No email'}</div>
+                            <div class="text-xs text-cyber-gray mt-1">ID: ${member.id}</div>
+                        `;
+                        
+                        groupMembers.appendChild(memberElement);
+                    });
+                }
+                
+                groupsLoadingStatus.textContent = `Loaded ${members.length} members`;
+            } catch (error) {
+                groupMembers.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                groupsLoadingStatus.textContent = 'Failed to load members';
+            }
+        }
+        
+        // Function to fetch group members
+        async function fetchGroupMembers(groupId, token) {
+            const membersApiEndpoint = `https://graph.microsoft.com/v1.0/groups/${groupId}/members`;
+            
+            try {
+                const response = await fetch(membersApiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                return data.value || [];
+            } catch (error) {
+                throw new Error(`Failed to fetch group members: ${error.message}`);
+            }
+        }
+        
+        // Export Group Members
+        exportGroupsButton.addEventListener('click', function() {
+            if (!window.currentGroupMembers || window.currentGroupMembers.length === 0) {
+                groupsLoadingStatus.textContent = 'No member data available for export';
+                return;
+            }
+            
+            // Create CSV content
+            let csvContent = "ID,Name,Email\n";
+            window.currentGroupMembers.forEach(member => {
+                csvContent += `${member.id},${member.displayName},${member.userPrincipalName || ''}\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'group_members.csv';
+            a.click();
+            
+            groupsLoadingStatus.textContent = `Exported ${window.currentGroupMembers.length} members`;
+        });
+        
+        // Email functionality
+        const fetchEmailsButton = document.getElementById('fetchEmailsButton');
+        const exportEmailsButton = document.getElementById('exportEmailsButton');
+        const searchButton = document.getElementById('searchButton');
+        const searchInput = document.getElementById('searchInput');
+        const emailList = document.getElementById('emailList');
+        const emailDetail = document.getElementById('emailDetail');
+        const emailsLoadingStatus = document.getElementById('emailsLoadingStatus');
+        
+        // Fetch emails
+        fetchEmailsButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                emailsLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            emailsLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading emails...';
+            emailList.innerHTML = '';
+            emailDetail.innerHTML = '';
+            
+            try {
+                const emails = await fetchInboxEmails(token);
+                displayEmails(emails, token);
+                emailsLoadingStatus.textContent = `Loaded ${emails.length} emails`;
+            } catch (error) {
+                emailList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                emailsLoadingStatus.textContent = 'Failed to load emails';
+            }
+        });
+        
+        // Function to fetch inbox emails
+        async function fetchInboxEmails(token) {
+            const apiEndpoint = 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages';
+            
+            try {
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                // Store emails for exporting
+                window.emailsForExport = data.value;
+                return data.value || [];
+            } catch (error) {
+                throw new Error(`Failed to fetch emails: ${error.message}`);
+            }
+        }
+        
+        // Function to display emails
+        function displayEmails(emails, token) {
+            emailList.innerHTML = '';
+            emailDetail.innerHTML = '';
+            
+            if (emails.length === 0) {
+                emailList.innerHTML = '<div class="text-cyber-yellow">No emails found</div>';
+                return;
+            }
+            
+            emails.forEach((email, index) => {
+                const date = new Date(email.sentDateTime).toLocaleString();
+                const preview = email.bodyPreview || 'No preview available';
+                
+                const emailElement = document.createElement('div');
+                emailElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                emailElement.dataset.id = email.id;
+                
+                emailElement.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                        <span class="text-white font-bold">${email.subject || 'No subject'}</span>
+                    </div>
+                    <div class="text-cyber-cyan mt-1">From: ${email.from?.emailAddress.name || 'Unknown'} (${email.from?.emailAddress.address || 'Unknown'})</div>
+                    <div class="text-xs text-cyber-gray mt-1">${date}</div>
+                    <div class="text-xs text-white mt-2 truncate">${preview}</div>
+                `;
+                
+                emailElement.addEventListener('click', async () => {
+                    const elements = document.querySelectorAll('#emailList > div');
+                    elements.forEach(el => el.classList.remove('bg-cyber-gray', 'border-cyber-cyan'));
+                    emailElement.classList.add('bg-cyber-gray', 'border-cyber-cyan');
+                    
+                    await fetchAndDisplayEmailDetail(email.id, token);
+                });
+                
+                emailList.appendChild(emailElement);
+            });
+        }
+        
+        // Function to fetch and display email detail
+        async function fetchAndDisplayEmailDetail(emailId, token) {
+            emailDetail.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading email...</div>';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/me/messages/${emailId}`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const email = await response.json();
+                
+                emailDetail.innerHTML = `
+                    <div class="border-b border-cyber-blue pb-2 mb-4">
+                        <div class="text-xl text-cyber-cyan mb-2">${email.subject || 'No subject'}</div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-white">From: ${email.from?.emailAddress.name || 'Unknown'} (${email.from?.emailAddress.address || 'Unknown'})</div>
+                                <div class="text-cyber-gray">Date: ${new Date(email.sentDateTime).toLocaleString()}</div>
+                            </div>
+                            <div class="text-xs bg-cyber-gray px-2 py-1 rounded">
+                                ${email.hasAttachments ? '<span class="text-cyber-green">Has Attachments</span>' : '<span class="text-cyber-gray">No Attachments</span>'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="email-body">
+                        ${email.body?.content || 'No content'}
+                    </div>
+                `;
+            } catch (error) {
+                emailDetail.innerHTML = `<div class="text-cyber-red">Error loading email: ${error.message}</div>`;
+            }
+        }
+        
+        // Search emails
+        searchButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                emailsLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            const searchTerm = searchInput.value.trim();
+            if (!searchTerm) {
+                emailsLoadingStatus.textContent = 'Please enter a search term';
+                return;
+            }
+            
+            emailsLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Searching emails...';
+            emailList.innerHTML = '';
+            emailDetail.innerHTML = '';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$search="${searchTerm}"`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Store search results for exporting
+                window.emailsForExport = data.value;
+                
+                displayEmails(data.value, token);
+                emailsLoadingStatus.textContent = `Found ${data.value.length} emails`;
+            } catch (error) {
+                emailList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                emailsLoadingStatus.textContent = 'Search failed';
+            }
+        });
+        
+        // Export emails
+        exportEmailsButton.addEventListener('click', function() {
+            if (!window.emailsForExport || window.emailsForExport.length === 0) {
+                emailsLoadingStatus.textContent = 'No email data available for export';
+                return;
+            }
+            
+            // Create CSV content
+            const csvContent = [
+                'From,To,Subject,Date,Body'
+            ];
+            
+            window.emailsForExport.forEach(email => {
+                const from = email.from?.emailAddress.name + ' (' + email.from?.emailAddress.address + ')';
+                const to = email.toRecipients?.map(recipient => recipient.emailAddress.address).join(', ');
+                const subject = email.subject || 'No Subject';
+                const date = new Date(email.sentDateTime).toLocaleString();
+                const body = email.bodyPreview || '';
+                
+                // Escape CSV fields properly
+                const escapeCsvField = field => {
+                    if (field === null || field === undefined) return '';
+                    return '"' + String(field).replace(/"/g, '""') + '"';
+                };
+                
+                csvContent.push([
+                    escapeCsvField(from),
+                    escapeCsvField(to),
+                    escapeCsvField(subject),
+                    escapeCsvField(date),
+                    escapeCsvField(body)
+                ].join(','));
+            });
+            
+            const csvText = csvContent.join('\n');
+            const blob = new Blob([csvText], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'emails.csv';
+            a.click();
+            
+            emailsLoadingStatus.textContent = `Exported ${window.emailsForExport.length} emails`;
+        });
+        
+        // Other user's emails functionality
+        const customEmailViewerForm = document.getElementById('customEmailViewerForm');
+        const customEmailList = document.getElementById('customEmailList');
+        const customEmailDetail = document.getElementById('customEmailDetail');
+        const otherEmailsLoadingStatus = document.getElementById('otherEmailsLoadingStatus');
+        
+        // Fetch other user's emails
+        customEmailViewerForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const token = tokenInput.value;
+            if (!token) {
+                otherEmailsLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            const customUserId = document.getElementById('customUserId').value.trim();
+            const customFolder = document.getElementById('customFolder').value.trim();
+            
+            if (!customUserId) {
+                otherEmailsLoadingStatus.textContent = 'User ID is required';
+                return;
+            }
+            
+            if (!customFolder) {
+                otherEmailsLoadingStatus.textContent = 'Folder is required';
+                return;
+            }
+            
+            otherEmailsLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading emails...';
+            customEmailList.innerHTML = '';
+            customEmailDetail.innerHTML = '';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/users/${customUserId}/mailFolders/${customFolder}/messages`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Store custom user data for future reference
+                window.currentCustomUser = {
+                    id: customUserId,
+                    folder: customFolder
+                };
+                
+                // Display emails
+                if (data.value.length === 0) {
+                    customEmailList.innerHTML = '<div class="text-cyber-yellow">No emails found</div>';
+                } else {
+                    data.value.forEach((email, index) => {
+                        const date = new Date(email.sentDateTime).toLocaleString();
+                        const preview = email.bodyPreview || 'No preview available';
+                        
+                        const emailElement = document.createElement('div');
+                        emailElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        emailElement.dataset.id = email.id;
+                        
+                        emailElement.innerHTML = `
+                            <div class="flex items-center">
+                                <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                                <span class="text-white font-bold">${email.subject || 'No subject'}</span>
+                            </div>
+                            <div class="text-cyber-cyan mt-1">From: ${email.from?.emailAddress.name || 'Unknown'} (${email.from?.emailAddress.address || 'Unknown'})</div>
+                            <div class="text-xs text-cyber-gray mt-1">${date}</div>
+                            <div class="text-xs text-white mt-2 truncate">${preview}</div>
+                        `;
+                        
+                        emailElement.addEventListener('click', async () => {
+                            const elements = document.querySelectorAll('#customEmailList > div');
+                            elements.forEach(el => el.classList.remove('bg-cyber-gray', 'border-cyber-cyan'));
+                            emailElement.classList.add('bg-cyber-gray', 'border-cyber-cyan');
+                            
+                            await fetchAndDisplayCustomEmailDetail(customUserId, email.id, token);
+                        });
+                        
+                        customEmailList.appendChild(emailElement);
+                    });
+                }
+                
+                otherEmailsLoadingStatus.textContent = `Loaded ${data.value.length} emails`;
+            } catch (error) {
+                customEmailList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                otherEmailsLoadingStatus.textContent = 'Failed to load emails';
+            }
+        });
+        
+        // Function to fetch and display other user's email detail
+        async function fetchAndDisplayCustomEmailDetail(userId, emailId, token) {
+            customEmailDetail.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading email...</div>';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/users/${userId}/messages/${emailId}`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const email = await response.json();
+                
+                customEmailDetail.innerHTML = `
+                    <div class="border-b border-cyber-blue pb-2 mb-4">
+                        <div class="text-xl text-cyber-cyan mb-2">${email.subject || 'No subject'}</div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-white">From: ${email.from?.emailAddress.name || 'Unknown'} (${email.from?.emailAddress.address || 'Unknown'})</div>
+                                <div class="text-cyber-gray">Date: ${new Date(email.sentDateTime).toLocaleString()}</div>
+                            </div>
+                            <div class="text-xs bg-cyber-gray px-2 py-1 rounded">
+                                ${email.hasAttachments ? '<span class="text-cyber-green">Has Attachments</span>' : '<span class="text-cyber-gray">No Attachments</span>'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="email-body">
+                        ${email.body?.content || 'No content'}
+                    </div>
+                `;
+            } catch (error) {
+                customEmailDetail.innerHTML = `<div class="text-cyber-red">Error loading email: ${error.message}</div>`;
+            }
+        }
+        
+        // Send email functionality
+        const sendEmailForm = document.getElementById('sendEmailForm');
+        const sendEmailStatus = document.getElementById('sendEmailStatus');
+        const emailSuccessMessage = document.getElementById('emailSuccessMessage');
+        const emailErrorMessage = document.getElementById('emailErrorMessage');
+        
+        // Send email
+        sendEmailForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const token = tokenInput.value;
+            if (!token) {
+                sendEmailStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            const to = document.getElementById('to').value.trim();
+            const subject = document.getElementById('subject').value.trim();
+            const body = document.getElementById('body').value.trim();
+            
+            if (!to) {
+                sendEmailStatus.textContent = 'Recipient is required';
+                return;
+            }
+            
+            // Hide previous messages
+            emailSuccessMessage.classList.add('hidden');
+            emailErrorMessage.classList.add('hidden');
+            
+            sendEmailStatus.innerHTML = '<div class="loading-spinner"></div> Sending email...';
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+            
+            // Handle attachments
+            const attachmentsInput = document.getElementById('attachments');
+            const attachments = attachmentsInput.files;
+            
+            const emailMessage = {
+                message: {
+                    subject,
+                    body: {
+                        contentType: 'Text',
+                        content: body
+                    },
+                    toRecipients: [
+                        {
+                            emailAddress: {
+                                address: to
+                            }
+                        }
+                    ],
+                    attachments: [] // Initialize empty array for attachments
+                },
+                saveToSentItems: true
+            };
+            
+            try {
+                // Process attachments if any
+                for (const attachment of attachments) {
+                    const attachmentPayload = {
+                        '@odata.type': '#microsoft.graph.fileAttachment',
+                        contentBytes: '',
+                        contentType: attachment.type,
+                        name: attachment.name
+                    };
+                    
+                    // Read file as base64
+                    const attachmentContent = await readFileAsBase64(attachment);
+                    attachmentPayload.contentBytes = attachmentContent;
+                    
+                    emailMessage.message.attachments.push(attachmentPayload);
+                }
+                
+                // Send the email
+                const sendEmailResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(emailMessage)
+                });
+                
+                if (sendEmailResponse.status === 202) {
+                    // Email sent successfully
+                    emailSuccessMessage.textContent = 'Message sent successfully!';
+                    emailSuccessMessage.classList.remove('hidden');
+                    sendEmailStatus.textContent = '';
+                    
+                    // Reset form
+                    sendEmailForm.reset();
+                } else {
+                    // Handle error response
+                    const errorData = await sendEmailResponse.json();
+                    emailErrorMessage.textContent = `Error: ${errorData.error?.message || 'Unknown error'}`;
+                    emailErrorMessage.classList.remove('hidden');
+                    sendEmailStatus.textContent = '';
+                }
+            } catch (error) {
+                emailErrorMessage.textContent = `Error: ${error.message}`;
+                emailErrorMessage.classList.remove('hidden');
+                sendEmailStatus.textContent = '';
+            }
+        });
+        
+        // Function to read file as base64
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    resolve(reader.result.split(',')[1]); // Extract base64 content
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Teams Chat functionality
+        const fetchChatsButton = document.getElementById('fetchChatsButton');
+        const chatList = document.getElementById('chatList');
+        const chatMessages = document.getElementById('chatMessages');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+        const messageTextBox = document.getElementById('messageTextBox');
+        const chatsLoadingStatus = document.getElementById('chatsLoadingStatus');
+        const sendMessageStatus = document.getElementById('sendMessageStatus');
+        
+        // Fetch Teams chats
+        fetchChatsButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                chatsLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            chatsLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading chats...';
+            chatList.innerHTML = '';
+            chatMessages.innerHTML = '';
+            sendMessageButton.disabled = true;
+            
+            try {
+                const apiEndpoint = 'https://graph.microsoft.com/v1.0/me/chats';
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.value.length === 0) {
+                    chatList.innerHTML = '<div class="text-cyber-yellow">No chats found</div>';
+                } else {
+                    data.value.forEach((chat, index) => {
+                        const chatElement = document.createElement('div');
+                        chatElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        chatElement.dataset.id = chat.id;
+                        
+                        // Format chat title
+                        let chatTitle = 'Teams Chat';
+                        if (chat.chatType === 'oneOnOne') {
+                            chatTitle = 'One-on-One Chat';
+                        } else if (chat.chatType === 'group') {
+                            chatTitle = 'Group Chat';
+                        } else if (chat.chatType === 'meeting') {
+                            chatTitle = 'Meeting Chat';
+                        }
+                        
+                        chatElement.innerHTML = `
+                            <div class="flex items-center">
+                                <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                                <span class="text-white font-bold">${chatTitle}</span>
+                            </div>
+                            <div class="text-cyber-cyan mt-1">Type: ${chat.chatType}</div>
+                            <div class="text-xs text-cyber-gray mt-1">Last Updated: ${new Date(chat.lastUpdatedDateTime).toLocaleString()}</div>
+                        `;
+                        
+                        chatElement.addEventListener('click', async () => {
+                            const elements = document.querySelectorAll('#chatList > div');
+                            elements.forEach(el => el.classList.remove('bg-cyber-gray', 'border-cyber-cyan'));
+                            chatElement.classList.add('bg-cyber-gray', 'border-cyber-cyan');
+                            
+                            await fetchAndDisplayChatMessages(chat.id, token);
+                            
+                            // Enable message sending for this chat
+                            sendMessageButton.disabled = false;
+                            sendMessageButton.dataset.chatId = chat.id;
+                        });
+                        
+                        chatList.appendChild(chatElement);
+                    });
+                }
+                
+                chatsLoadingStatus.textContent = `Loaded ${data.value.length} chats`;
+            } catch (error) {
+                chatList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                chatsLoadingStatus.textContent = 'Failed to load chats';
+            }
+        });
+        
+        // Function to fetch and display chat messages
+        async function fetchAndDisplayChatMessages(chatId, token) {
+            chatMessages.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading messages...</div>';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/me/chats/${chatId}/messages`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                chatMessages.innerHTML = '';
+                
+                if (data.value.length === 0) {
+                    chatMessages.innerHTML = '<div class="text-cyber-yellow">No messages found in this chat</div>';
+                } else {
+                    // Reverse messages to show newest at the bottom
+                    const reversedMessages = [...data.value].reverse();
+                    
+                    for (const message of reversedMessages) {
+                        const messageElement = document.createElement('div');
+                        messageElement.className = 'p-3 bg-cyber-dark rounded mb-3 border-l-4';
+                        
+                        // Determine if message is from current user or someone else
+                        const isFromCurrentUser = !message.from || !message.from.user;
+                        
+                        // Style differently based on sender
+                        if (isFromCurrentUser) {
+                            messageElement.classList.add('border-cyber-green');
+                        } else {
+                            messageElement.classList.add('border-cyber-blue');
+                        }
+                        
+                        const senderName = message.from?.user?.displayName || 'You';
+                        const messageDate = new Date(message.createdDateTime).toLocaleString();
+                        
+                        // Process message content
+                        let messageContent = message.body?.content || 'No content';
+                        
+                        // If message is HTML, clean it for display
+                        if (message.body?.contentType === 'html') {
+                            // Simple HTML sanitization
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = messageContent;
+                            messageContent = tempDiv.innerText;
+                        }
+                        
+                        messageElement.innerHTML = `
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-${isFromCurrentUser ? 'cyber-green' : 'cyber-blue'} font-bold">${senderName}</span>
+                                <span class="text-cyber-gray text-xs">${messageDate}</span>
+                            </div>
+                            <div class="text-white">${messageContent}</div>
+                        `;
+                        
+                        // Handle attachments if any
+                        if (message.attachments && message.attachments.length > 0) {
+                            const attachmentsContainer = document.createElement('div');
+                            attachmentsContainer.className = 'mt-2 pt-2 border-t border-cyber-gray';
+                            
+                            message.attachments.forEach(attachment => {
+                                const attachmentElement = document.createElement('div');
+                                attachmentElement.className = 'flex items-center text-xs text-cyber-cyan mt-1';
+                                
+                                attachmentElement.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                    ${attachment.name} (${attachment.contentType})
+                                `;
+                                
+                                attachmentsContainer.appendChild(attachmentElement);
+                            });
+                            
+                            messageElement.appendChild(attachmentsContainer);
+                        }
+                        
+                        chatMessages.appendChild(messageElement);
+                    }
+                    
+                    // Scroll to bottom of messages
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            } catch (error) {
+                chatMessages.innerHTML = `<div class="text-cyber-red">Error loading messages: ${error.message}</div>`;
+            }
+        }
+        
+        // Send message to Teams chat
+        sendMessageButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                sendMessageStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            const message = messageTextBox.value.trim();
+            if (!message) {
+                sendMessageStatus.textContent = 'Message is required';
+                return;
+            }
+            
+            const chatId = this.dataset.chatId;
+            if (!chatId) {
+                sendMessageStatus.textContent = 'No chat selected';
+                return;
+            }
+            
+            sendMessageStatus.innerHTML = '<div class="loading-spinner"></div> Sending message...';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/me/chats/${chatId}/messages`;
+                
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        body: {
+                            content: message
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `HTTP error ${response.status}`);
+                }
+                
+                // Clear message input
+                messageTextBox.value = '';
+                
+                // Refresh messages
+                await fetchAndDisplayChatMessages(chatId, token);
+                
+                sendMessageStatus.textContent = 'Message sent successfully';
+                
+                // Clear status after a few seconds
+                setTimeout(() => {
+                    sendMessageStatus.textContent = '';
+                }, 3000);
+            } catch (error) {
+                sendMessageStatus.textContent = `Error: ${error.message}`;
+            }
+        });
+        
+        // Teams channels functionality
+        const listPublicChatsButton = document.getElementById('listPublicChatsButton');
+        const publicChatList = document.getElementById('publicChatList');
+        const publicChatMessages = document.getElementById('publicChatMessages');
+        const channelsLoadingStatus = document.getElementById('channelsLoadingStatus');
+        
+        // List public Teams channels
+        listPublicChatsButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                channelsLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            channelsLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading teams...';
+            publicChatList.innerHTML = '';
+            publicChatMessages.innerHTML = '';
+            
+            try {
+                // First fetch the teams the user is a member of
+                const teamsApiEndpoint = 'https://graph.microsoft.com/v1.0/me/joinedTeams';
+                
+                const teamsResponse = await fetch(teamsApiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!teamsResponse.ok) {
+                    throw new Error(`HTTP error ${teamsResponse.status}: ${teamsResponse.statusText}`);
+                }
+                
+                const teamsData = await teamsResponse.json();
+                
+                if (teamsData.value.length === 0) {
+                    publicChatList.innerHTML = '<div class="text-cyber-yellow">No teams found</div>';
+                    channelsLoadingStatus.textContent = 'No teams found';
+                    return;
+                }
+                
+                // Store teams for future reference
+                window.userTeams = teamsData.value;
+                
+                let totalChannels = 0;
+                
+                // For each team, fetch its channels
+                for (const team of teamsData.value) {
+                    const channelsApiEndpoint = `https://graph.microsoft.com/v1.0/teams/${team.id}/channels`;
+                    
+                    channelsLoadingStatus.innerHTML = `<div class="loading-spinner"></div> Loading channels for ${team.displayName}...`;
+                    
+                    try {
+                        const channelsResponse = await fetch(channelsApiEndpoint, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (!channelsResponse.ok) {
+                            console.error(`Error fetching channels for team ${team.id}: ${channelsResponse.status}`);
+                            continue; // Skip to next team if this fails
+                        }
+                        
+                        const channelsData = await channelsResponse.json();
+                        
+                        // Create team header
+                        const teamHeader = document.createElement('div');
+                        teamHeader.className = 'text-cyber-green font-bold mb-2 mt-4 border-b border-cyber-blue pb-1';
+                        teamHeader.textContent = team.displayName;
+                        publicChatList.appendChild(teamHeader);
+                        
+                        if (channelsData.value.length === 0) {
+                            const noChannelsMsg = document.createElement('div');
+                            noChannelsMsg.className = 'text-cyber-yellow ml-4 mb-2';
+                            noChannelsMsg.textContent = 'No channels found in this team';
+                            publicChatList.appendChild(noChannelsMsg);
+                        } else {
+                            // Add channels for this team
+                            channelsData.value.forEach((channel, index) => {
+                                totalChannels++;
+                                
+                                const channelElement = document.createElement('div');
+                                channelElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer ml-4';
+                                channelElement.dataset.teamId = team.id;
+                                channelElement.dataset.channelId = channel.id;
+                                
+                                channelElement.innerHTML = `
+                                    <div class="flex items-center">
+                                        <span class="text-cyber-cyan mr-2">#</span>
+                                        <span class="text-white font-bold">${channel.displayName}</span>
+                                    </div>
+                                    <div class="text-xs text-cyber-gray mt-1">${channel.description || 'No description'}</div>
+                                `;
+                                
+                                channelElement.addEventListener('click', async () => {
+                                    const elements = document.querySelectorAll('#publicChatList > div.cursor-pointer');
+                                    elements.forEach(el => el.classList.remove('bg-cyber-gray', 'border-cyber-cyan'));
+                                    channelElement.classList.add('bg-cyber-gray', 'border-cyber-cyan');
+                                    
+                                    await fetchAndDisplayChannelMessages(team.id, channel.id, token);
+                                });
+                                
+                                publicChatList.appendChild(channelElement);
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Error processing channels for team ${team.id}:`, error);
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'text-cyber-red ml-4 mb-2';
+                        errorMsg.textContent = `Error loading channels: ${error.message}`;
+                        publicChatList.appendChild(errorMsg);
+                    }
+                }
+                
+                channelsLoadingStatus.textContent = `Loaded ${totalChannels} channels from ${teamsData.value.length} teams`;
+            } catch (error) {
+                publicChatList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                channelsLoadingStatus.textContent = 'Failed to load teams';
+            }
+        });
+        
+        // Function to fetch and display channel messages
+        async function fetchAndDisplayChannelMessages(teamId, channelId, token) {
+            publicChatMessages.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading messages...</div>';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/teams/${teamId}/channels/${channelId}/messages`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                publicChatMessages.innerHTML = '';
+                
+                if (data.value.length === 0) {
+                    publicChatMessages.innerHTML = '<div class="text-cyber-yellow">No messages found in this channel</div>';
+                } else {
+                    data.value.forEach(message => {
+                        const messageElement = document.createElement('div');
+                        messageElement.className = 'p-3 bg-cyber-dark rounded mb-3 border-l-4 border-cyber-blue';
+                        
+                        const senderName = message.from?.user?.displayName || 'Unknown';
+                        const messageDate = new Date(message.createdDateTime).toLocaleString();
+                        
+                        // Process message content
+                        let messageContent = message.body?.content || 'No content';
+                        
+                        // If message is HTML, clean it for display
+                        if (message.body?.contentType === 'html') {
+                            // Simple HTML sanitization
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = messageContent;
+                            messageContent = tempDiv.innerText;
+                        }
+                        
+                        messageElement.innerHTML = `
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-cyber-cyan font-bold">${senderName}</span>
+                                <span class="text-cyber-gray text-xs">${messageDate}</span>
+                            </div>
+                            <div class="text-white">${messageContent}</div>
+                        `;
+                        
+                        publicChatMessages.appendChild(messageElement);
+                    });
+                }
+            } catch (error) {
+                publicChatMessages.innerHTML = `<div class="text-cyber-red">Error loading messages: ${error.message}</div>`;
+            }
+        }
+        
+        // OneDrive functionality
+        const listFilesButton = document.getElementById('listFilesButton');
+        const fileList = document.getElementById('fileList');
+        const myFilesLoadingStatus = document.getElementById('myFilesLoadingStatus');
+        
+        // List OneDrive files
+        listFilesButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                myFilesLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            myFilesLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading files...';
+            fileList.innerHTML = '';
+            
+            try {
+                await fetchAndDisplayDriveItems('me/drive/root/children', token, fileList);
+                myFilesLoadingStatus.textContent = 'Files loaded successfully';
+            } catch (error) {
+                fileList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                myFilesLoadingStatus.textContent = 'Failed to load files';
+            }
+        });
+        
+        // Function to fetch and display drive items
+        async function fetchAndDisplayDriveItems(itemPath, token, containerElement, isNavigatingBack = false) {
+            containerElement.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading items...</div>';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/${itemPath}`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                containerElement.innerHTML = '';
+                
+                // Add back button if not at root
+                if (!isNavigatingBack && itemPath !== 'me/drive/root/children') {
+                    const backButton = document.createElement('div');
+                    backButton.className = 'col-span-1 md:col-span-2 lg:col-span-3 p-4 bg-cyber-gray rounded mb-4 cursor-pointer flex items-center';
+                    
+                    backButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                        </svg>
+                        <span class="text-cyber-cyan">Back to Parent Folder</span>
+                    `;
+                    
+                    backButton.addEventListener('click', async () => {
+                        // Extract parent reference from path
+                        const pathParts = itemPath.split('/');
+                        pathParts.pop(); // Remove "children"
+                        pathParts.pop(); // Remove item id
+                        const parentPath = pathParts.join('/') + '/children';
+                        
+                        await fetchAndDisplayDriveItems(parentPath, token, containerElement, true);
+                    });
+                    
+                    containerElement.appendChild(backButton);
+                }
+                
+                if (data.value.length === 0) {
+                    const emptyFolder = document.createElement('div');
+                    emptyFolder.className = 'text-cyber-yellow col-span-1 md:col-span-2 lg:col-span-3';
+                    emptyFolder.textContent = 'This folder is empty';
+                    containerElement.appendChild(emptyFolder);
+                } else {
+                    // First display folders, then files
+                    const folders = data.value.filter(item => item.folder);
+                    const files = data.value.filter(item => !item.folder);
+                    
+                    // Display folders
+                    folders.forEach(folder => {
+                        const folderElement = document.createElement('div');
+                        folderElement.className = 'bg-cyber-gray rounded p-4 cursor-pointer hover:bg-cyber-light transition-all hover:-translate-y-1';
+                        
+                        folderElement.innerHTML = `
+                            <div class="flex items-center mb-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <div class="text-white font-bold truncate">${folder.name}</div>
+                            </div>
+                            <div class="text-xs text-cyber-gray">Folder • ${folder.folder.childCount} items</div>
+                        `;
+                        
+                        folderElement.addEventListener('click', async () => {
+                            await fetchAndDisplayDriveItems(`me/drive/items/${folder.id}/children`, token, containerElement);
+                        });
+                        
+                        containerElement.appendChild(folderElement);
+                    });
+                    
+                    // Display files
+                    files.forEach(file => {
+                        const fileElement = document.createElement('div');
+                        fileElement.className = 'bg-cyber-gray rounded p-4 hover:bg-cyber-light transition-all hover:-translate-y-1';
+                        
+                        // Determine file icon based on type
+                        let fileIcon = '';
+                        const fileType = file.name.split('.').pop().toLowerCase();
+                        
+                        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileType)) {
+                            fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>';
+                        } else if (['doc', 'docx', 'txt', 'rtf', 'pdf'].includes(fileType)) {
+                            fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-yellow mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                        } else if (['xls', 'xlsx', 'csv'].includes(fileType)) {
+                            fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                        } else if (['ppt', 'pptx'].includes(fileType)) {
+                            fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-red mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>';
+                        } else {
+                            fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-blue mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
+                        }
+                        
+                        // Format file size
+                        const fileSize = formatFileSize(file.size);
+                        
+                        fileElement.innerHTML = `
+                            <div class="flex items-center mb-2">
+                                ${fileIcon}
+                                <div class="text-white font-bold truncate">${file.name}</div>
+                            </div>
+                            <div class="text-xs text-cyber-gray">${fileType.toUpperCase()} • ${fileSize}</div>
+                            <div class="mt-2 text-center">
+                                <button class="download-btn text-cyber-blue text-xs hover:text-cyber-cyan transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download
+                                </button>
+                            </div>
+                        `;
+                        
+                        const downloadBtn = fileElement.querySelector('.download-btn');
+                        downloadBtn.addEventListener('click', async (e) => {
+                            e.stopPropagation(); // Prevent file card click event
+                            
+                            downloadBtn.innerHTML = '<div class="loading-spinner"></div> Downloading...';
+                            
+                            try {
+                                // Get download URL
+                                const downloadResponse = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${file.id}`, {
+                                    headers: {
+                                        'Authorization': `Bearer ${token}`
+                                    }
+                                });
+                                
+                                if (!downloadResponse.ok) {
+                                    throw new Error(`HTTP error ${downloadResponse.status}`);
+                                }
+                                
+                                const fileData = await downloadResponse.json();
+                                const downloadUrl = fileData['@microsoft.graph.downloadUrl'];
+                                
+                                // Initiate download
+                                const a = document.createElement('a');
+                                a.href = downloadUrl;
+                                a.download = file.name;
+                                a.target = '_blank';
+                                a.click();
+                                
+                                downloadBtn.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download
+                                `;
+                            } catch (error) {
+                                downloadBtn.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1 text-cyber-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Error
+                                `;
+                                console.error('Download error:', error);
+                            }
+                        });
+                        
+                        containerElement.appendChild(fileElement);
+                    });
+                }
+            } catch (error) {
+                containerElement.innerHTML = `<div class="text-cyber-red">Error loading files: ${error.message}</div>`;
+            }
+        }
+        
+        // Shared Files functionality
+        const listSharedFilesButton = document.getElementById('listSharedFilesButton');
+        const sharedFileList = document.getElementById('sharedFileList');
+        const sharedFilesLoadingStatus = document.getElementById('sharedFilesLoadingStatus');
+        
+        // List shared files
+        listSharedFilesButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                sharedFilesLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            sharedFilesLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading shared files...';
+            sharedFileList.innerHTML = '';
+            
+            try {
+                const apiEndpoint = 'https://graph.microsoft.com/v1.0/me/drive/sharedWithMe';
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                sharedFileList.innerHTML = '';
+                
+                if (data.value.length === 0) {
+                    sharedFileList.innerHTML = '<div class="text-cyber-yellow">No shared files found</div>';
+                } else {
+                    data.value.forEach(file => {
+                        const fileElement = document.createElement('div');
+                        fileElement.className = 'bg-cyber-gray rounded p-4 hover:bg-cyber-light transition-all hover:-translate-y-1';
+                        
+                        // Determine file icon based on type
+                        let fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-blue mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
+                        
+                        if (file.name) {
+                            const fileType = file.name.split('.').pop()?.toLowerCase();
+                            
+                            if (fileType && ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>';
+                            } else if (fileType && ['doc', 'docx', 'txt', 'rtf', 'pdf'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-yellow mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['xls', 'xlsx', 'csv'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['ppt', 'pptx'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyber-red mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>';
+                            }
+                        }
+                        
+                        // Format file size
+                        const fileSize = file.size ? formatFileSize(file.size) : 'Unknown size';
+                        const sharedBy = file.shared?.sharedBy?.user?.displayName || 'Unknown';
+                        
+                        fileElement.innerHTML = `
+                            <div class="flex items-center mb-2">
+                                ${fileIcon}
+                                <div class="text-white font-bold truncate">${file.name || 'Unnamed file'}</div>
+                            </div>
+                            <div class="text-xs text-cyber-cyan mb-1">Shared by: ${sharedBy}</div>
+                            <div class="text-xs text-cyber-gray">${fileSize}</div>
+                            ${file.webUrl ? `
+                            <div class="mt-2 text-center">
+                                <a href="${file.webUrl}" target="_blank" class="text-cyber-blue text-xs hover:text-cyber-cyan transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    Open
+                                </a>
+                            </div>` : ''}
+                        `;
+                        
+                        sharedFileList.appendChild(fileElement);
+                    });
+                }
+                
+                sharedFilesLoadingStatus.textContent = `Loaded ${data.value.length} shared files`;
+            } catch (error) {
+                sharedFileList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                sharedFilesLoadingStatus.textContent = 'Failed to load shared files';
+            }
+        });
+        
+        // SharePoint functionality
+        const listDrivesButton = document.getElementById('listDrivesButton');
+        const listSitesButton = document.getElementById('listSitesButton');
+        const driveList = document.getElementById('driveList');
+        const siteList = document.getElementById('siteList');
+        const sharePointDriveFileList = document.getElementById('sharePointDriveFileList');
+        const sharePointfileList = document.getElementById('sharePointfileList');
+        const drivesLoadingStatus = document.getElementById('drivesLoadingStatus');
+        const sitesLoadingStatus = document.getElementById('sitesLoadingStatus');
+        
+        // List SharePoint drives
+        listDrivesButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                drivesLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            drivesLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading drives...';
+            driveList.innerHTML = '';
+            sharePointDriveFileList.innerHTML = '';
+            
+            try {
+                // First get the root site
+                const siteApiEndpoint = 'https://graph.microsoft.com/v1.0/sites/root';
+                
+                const siteResponse = await fetch(siteApiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!siteResponse.ok) {
+                    throw new Error(`HTTP error ${siteResponse.status}: ${siteResponse.statusText}`);
+                }
+                
+                const siteData = await siteResponse.json();
+                const siteId = siteData.id;
+                
+                // Get drives for the root site
+                const drivesApiEndpoint = `https://graph.microsoft.com/v1.0/sites/${siteId}/drives`;
+                
+                const drivesResponse = await fetch(drivesApiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!drivesResponse.ok) {
+                    throw new Error(`HTTP error ${drivesResponse.status}: ${drivesResponse.statusText}`);
+                }
+                
+                const drivesData = await drivesResponse.json();
+                
+                if (drivesData.value.length === 0) {
+                    driveList.innerHTML = '<div class="text-cyber-yellow">No drives found</div>';
+                } else {
+                    drivesData.value.forEach((drive, index) => {
+                        const driveElement = document.createElement('div');
+                        driveElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        driveElement.dataset.id = drive.id;
+                        
+                        driveElement.innerHTML = `
+                            <div class="flex items-center">
+                                <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                                <span class="text-white font-bold">${drive.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-cyan mt-1">Type: ${drive.driveType}</div>
+                            ${drive.webUrl ? `<div class="text-xs text-cyber-gray mt-1 truncate">URL: ${drive.webUrl}</div>` : ''}
+                        `;
+                        
+                        driveElement.addEventListener('click', async () => {
+                            const elements = document.querySelectorAll('#driveList > div');
+                            elements.forEach(el => el.classList.remove('bg-cyber-gray', 'border-cyber-cyan'));
+                            driveElement.classList.add('bg-cyber-gray', 'border-cyber-cyan');
+                            
+                            await fetchAndDisplaySharePointDriveContents(drive.id, token);
+                        });
+                        
+                        driveList.appendChild(driveElement);
+                    });
+                }
+                
+                drivesLoadingStatus.textContent = `Loaded ${drivesData.value.length} drives`;
+            } catch (error) {
+                driveList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                drivesLoadingStatus.textContent = 'Failed to load drives';
+            }
+        });
+        
+        // Function to fetch and display SharePoint drive contents
+        async function fetchAndDisplaySharePointDriveContents(driveId, token, itemId = 'root') {
+            sharePointDriveFileList.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading items...</div>';
+            
+            try {
+                let apiEndpoint;
+                if (itemId === 'root') {
+                    apiEndpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/root/children`;
+                } else {
+                    apiEndpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}/children`;
+                }
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                sharePointDriveFileList.innerHTML = '';
+                
+                // Add back button if not at root
+                if (itemId !== 'root') {
+                    const backButton = document.createElement('div');
+                    backButton.className = 'p-2 bg-cyber-gray rounded mb-2 cursor-pointer flex items-center';
+                    
+                    backButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                        </svg>
+                        <span class="text-cyber-cyan">Back to Parent Folder</span>
+                    `;
+                    
+                    backButton.addEventListener('click', async () => {
+                        // Get parent info
+                        const itemApiEndpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}`;
+                        
+                        try {
+                            const itemResponse = await fetch(itemApiEndpoint, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (!itemResponse.ok) {
+                                throw new Error(`HTTP error ${itemResponse.status}`);
+                            }
+                            
+                            const itemData = await itemResponse.json();
+                            
+                            // Navigate to parent or root if no parent
+                            if (itemData.parentReference && itemData.parentReference.id) {
+                                await fetchAndDisplaySharePointDriveContents(driveId, token, itemData.parentReference.id);
+                            } else {
+                                await fetchAndDisplaySharePointDriveContents(driveId, token);
+                            }
+                        } catch (error) {
+                            // Fallback to root if error
+                            await fetchAndDisplaySharePointDriveContents(driveId, token);
+                        }
+                    });
+                    
+                    sharePointDriveFileList.appendChild(backButton);
+                }
+                
+                if (data.value.length === 0) {
+                    const emptyFolder = document.createElement('div');
+                    emptyFolder.className = 'text-cyber-yellow p-2';
+                    emptyFolder.textContent = 'This folder is empty';
+                    sharePointDriveFileList.appendChild(emptyFolder);
+                } else {
+                    // First display folders, then files
+                    const folders = data.value.filter(item => item.folder);
+                    const files = data.value.filter(item => !item.folder);
+                    
+                    // Display folders
+                    folders.forEach(folder => {
+                        const folderElement = document.createElement('div');
+                        folderElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        
+                        folderElement.innerHTML = `
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <span class="text-white">${folder.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1">${folder.folder.childCount} items</div>
+                        `;
+                        
+                        folderElement.addEventListener('click', async () => {
+                            await fetchAndDisplaySharePointDriveContents(driveId, token, folder.id);
+                        });
+                        
+                        sharePointDriveFileList.appendChild(folderElement);
+                    });
+                    
+                    // Display files
+                    files.forEach(file => {
+                        const fileElement = document.createElement('div');
+                        fileElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2';
+                        
+                        // Determine file type icon
+                        let fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-blue mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
+                        
+                        if (file.name) {
+                            const fileType = file.name.split('.').pop()?.toLowerCase();
+                            
+                            if (fileType && ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>';
+                            } else if (fileType && ['doc', 'docx', 'txt', 'rtf', 'pdf'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-yellow mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['xls', 'xlsx', 'csv'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['ppt', 'pptx'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-red mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>';
+                            }
+                        }
+                        
+                        // Format file size
+                        const fileSize = file.size ? formatFileSize(file.size) : 'Unknown size';
+                        
+                        fileElement.innerHTML = `
+                            <div class="flex items-center">
+                                ${fileIcon}
+                                <span class="text-white">${file.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1">${fileSize}</div>
+                            ${file.webUrl ? `
+                            <div class="mt-1">
+                                <a href="${file.webUrl}" target="_blank" class="text-cyber-blue text-xs hover:text-cyber-cyan transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    Open
+                                </a>
+                            </div>` : ''}
+                        `;
+                        
+                        sharePointDriveFileList.appendChild(fileElement);
+                    });
+                }
+            } catch (error) {
+                sharePointDriveFileList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // List SharePoint sites
+        listSitesButton.addEventListener('click', async function() {
+            const token = tokenInput.value;
+            if (!token) {
+                sitesLoadingStatus.textContent = 'Token is required';
+                return;
+            }
+            
+            sitesLoadingStatus.innerHTML = '<div class="loading-spinner"></div> Loading sites...';
+            siteList.innerHTML = '';
+            sharePointfileList.innerHTML = '';
+            
+            try {
+                const apiEndpoint = 'https://graph.microsoft.com/v1.0/sites?search=*';
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.value.length === 0) {
+                    siteList.innerHTML = '<div class="text-cyber-yellow">No sites found</div>';
+                } else {
+                    data.value.forEach((site, index) => {
+                        const siteElement = document.createElement('div');
+                        siteElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        siteElement.dataset.id = site.id;
+                        
+                        siteElement.innerHTML = `
+                            <div class="flex items-center">
+                                <span class="text-cyber-green mr-2">[${index + 1}]</span>
+                                <span class="text-white font-bold">${site.displayName || site.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1 truncate">URL: ${site.webUrl || 'No URL'}</div>
+                        `;
+                        
+                        siteElement.addEventListener('click', async () => {
+                            const elements = document.querySelectorAll('#siteList > div');
+                            elements.forEach(el => el.classList.remove('bg-cyber-gray', 'border-cyber-cyan'));
+                            siteElement.classList.add('bg-cyber-gray', 'border-cyber-cyan');
+                            
+                            await fetchAndDisplaySiteContents(site.id, token);
+                        });
+                        
+                        siteList.appendChild(siteElement);
+                    });
+                }
+                
+                sitesLoadingStatus.textContent = `Loaded ${data.value.length} sites`;
+            } catch (error) {
+                siteList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+                sitesLoadingStatus.textContent = 'Failed to load sites';
+            }
+        });
+        
+        // Function to fetch and display SharePoint site contents
+        async function fetchAndDisplaySiteContents(siteId, token) {
+            sharePointfileList.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading site content...</div>';
+            
+            try {
+                // First get the default drive for the site
+                const driveApiEndpoint = `https://graph.microsoft.com/v1.0/sites/${siteId}/drive`;
+                
+                const driveResponse = await fetch(driveApiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!driveResponse.ok) {
+                    throw new Error(`HTTP error ${driveResponse.status}: ${driveResponse.statusText}`);
+                }
+                
+                const driveData = await driveResponse.json();
+                const driveId = driveData.id;
+                
+                // Now get the root folder contents
+                const rootItemsApiEndpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/root/children`;
+                
+                const itemsResponse = await fetch(rootItemsApiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!itemsResponse.ok) {
+                    throw new Error(`HTTP error ${itemsResponse.status}: ${itemsResponse.statusText}`);
+                }
+                
+                const itemsData = await itemsResponse.json();
+                
+                sharePointfileList.innerHTML = '';
+                
+                if (itemsData.value.length === 0) {
+                    sharePointfileList.innerHTML = '<div class="text-cyber-yellow">No items found</div>';
+                } else {
+                    // Store site and drive info for folder navigation
+                    window.currentSharePointSite = {
+                        siteId: siteId,
+                        driveId: driveId
+                    };
+                    
+                    // First display folders, then files
+                    const folders = itemsData.value.filter(item => item.folder);
+                    const files = itemsData.value.filter(item => !item.folder);
+                    
+                    // Display folders
+                    folders.forEach(folder => {
+                        const folderElement = document.createElement('div');
+                        folderElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        folderElement.dataset.id = folder.id;
+                        
+                        folderElement.innerHTML = `
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <span class="text-white">${folder.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1">${folder.folder.childCount} items</div>
+                        `;
+                        
+                        folderElement.addEventListener('click', async () => {
+                            await fetchAndDisplaySharePointFolderContents(driveId, folder.id, token);
+                        });
+                        
+                        sharePointfileList.appendChild(folderElement);
+                    });
+                    
+                    // Display files
+                    files.forEach(file => {
+                        const fileElement = document.createElement('div');
+                        fileElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2';
+                        
+                        // Determine file type icon
+                        let fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-blue mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
+                        
+                        if (file.name) {
+                            const fileType = file.name.split('.').pop()?.toLowerCase();
+                            
+                            if (fileType && ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>';
+                            } else if (fileType && ['doc', 'docx', 'txt', 'rtf', 'pdf'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-yellow mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['xls', 'xlsx', 'csv'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['ppt', 'pptx'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-red mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>';
+                            }
+                        }
+                        
+                        // Format file size
+                        const fileSize = file.size ? formatFileSize(file.size) : 'Unknown size';
+                        
+                        fileElement.innerHTML = `
+                            <div class="flex items-center">
+                                ${fileIcon}
+                                <span class="text-white">${file.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1">${fileSize}</div>
+                            ${file.webUrl ? `
+                            <div class="mt-1">
+                                <a href="${file.webUrl}" target="_blank" class="text-cyber-blue text-xs hover:text-cyber-cyan transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    Open
+                                </a>
+                            </div>` : ''}
+                        `;
+                        
+                        sharePointfileList.appendChild(fileElement);
+                    });
+                }
+            } catch (error) {
+                sharePointfileList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Function to fetch and display SharePoint folder contents
+        async function fetchAndDisplaySharePointFolderContents(driveId, itemId, token) {
+            sharePointfileList.innerHTML = '<div class="text-cyber-yellow"><div class="loading-spinner"></div> Loading folder contents...</div>';
+            
+            try {
+                const apiEndpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}/children`;
+                
+                const response = await fetch(apiEndpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                sharePointfileList.innerHTML = '';
+                
+                // Add back button
+                const backButton = document.createElement('div');
+                backButton.className = 'p-2 bg-cyber-gray rounded mb-2 cursor-pointer flex items-center';
+                
+                backButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                    </svg>
+                    <span class="text-cyber-cyan">Back to Parent Folder</span>
+                `;
+                
+                backButton.addEventListener('click', async () => {
+                    // Get parent info
+                    const itemApiEndpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}`;
+                    
+                    try {
+                        const itemResponse = await fetch(itemApiEndpoint, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (!itemResponse.ok) {
+                            throw new Error(`HTTP error ${itemResponse.status}`);
+                        }
+                        
+                        const itemData = await itemResponse.json();
+                        
+                        // Navigate to parent or root if no parent
+                        if (itemData.parentReference && itemData.parentReference.id) {
+                            if (itemData.parentReference.id === 'root') {
+                                // If parent is root, fetch site contents
+                                const siteId = window.currentSharePointSite?.siteId;
+                                if (siteId) {
+                                    await fetchAndDisplaySiteContents(siteId, token);
+                                } else {
+                                    // Fallback to drive contents if site ID is not stored
+                                    await fetchAndDisplaySharePointDriveContents(driveId, token);
+                                }
+                            } else {
+                                await fetchAndDisplaySharePointFolderContents(driveId, itemData.parentReference.id, token);
+                            }
+                        } else {
+                            // Fallback to site contents
+                            const siteId = window.currentSharePointSite?.siteId;
+                            if (siteId) {
+                                await fetchAndDisplaySiteContents(siteId, token);
+                            } else {
+                                await fetchAndDisplaySharePointDriveContents(driveId, token);
+                            }
+                        }
+                    } catch (error) {
+                        // Fallback to site root if error
+                        if (window.currentSharePointSite?.siteId) {
+                            await fetchAndDisplaySiteContents(window.currentSharePointSite.siteId, token);
+                        } else {
+                            sharePointfileList.innerHTML = `<div class="text-cyber-red">Error navigating back: ${error.message}</div>`;
+                        }
+                    }
+                });
+                
+                sharePointfileList.appendChild(backButton);
+                
+                if (data.value.length === 0) {
+                    const emptyFolder = document.createElement('div');
+                    emptyFolder.className = 'text-cyber-yellow p-2';
+                    emptyFolder.textContent = 'This folder is empty';
+                    sharePointfileList.appendChild(emptyFolder);
+                } else {
+                    // First display folders, then files
+                    const folders = data.value.filter(item => item.folder);
+                    const files = data.value.filter(item => !item.folder);
+                    
+                    // Display folders
+                    folders.forEach(folder => {
+                        const folderElement = document.createElement('div');
+                        folderElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2 cursor-pointer';
+                        folderElement.dataset.id = folder.id;
+                        
+                        folderElement.innerHTML = `
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <span class="text-white">${folder.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1">${folder.folder.childCount} items</div>
+                        `;
+                        
+                        folderElement.addEventListener('click', async () => {
+                            await fetchAndDisplaySharePointFolderContents(driveId, folder.id, token);
+                        });
+                        
+                        sharePointfileList.appendChild(folderElement);
+                    });
+                    
+                    // Display files
+                    files.forEach(file => {
+                        const fileElement = document.createElement('div');
+                        fileElement.className = 'p-2 hover:bg-cyber-gray rounded mb-2';
+                        
+                        // Determine file type icon
+                        let fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-blue mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
+                        
+                        if (file.name) {
+                            const fileType = file.name.split('.').pop()?.toLowerCase();
+                            
+                            if (fileType && ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>';
+                            } else if (fileType && ['doc', 'docx', 'txt', 'rtf', 'pdf'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-yellow mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['xls', 'xlsx', 'csv'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-green mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>';
+                            } else if (fileType && ['ppt', 'pptx'].includes(fileType)) {
+                                fileIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-red mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>';
+                            }
+                        }
+                        
+                        // Format file size
+                        const fileSize = file.size ? formatFileSize(file.size) : 'Unknown size';
+                        
+                        fileElement.innerHTML = `
+                            <div class="flex items-center">
+                                ${fileIcon}
+                                <span class="text-white">${file.name}</span>
+                            </div>
+                            <div class="text-xs text-cyber-gray mt-1">${fileSize}</div>
+                            ${file.webUrl ? `
+                            <div class="mt-1">
+                                <a href="${file.webUrl}" target="_blank" class="text-cyber-blue text-xs hover:text-cyber-cyan transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    Open
+                                </a>
+                            </div>` : ''}
+                        `;
+                        
+                        sharePointfileList.appendChild(fileElement);
+                    });
+                }
+            } catch (error) {
+                sharePointfileList.innerHTML = `<div class="text-cyber-red">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Utility function to format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Initialize HTTP method select behavior
+        document.getElementById('httpMethod').dispatchEvent(new Event('change'));
+        
+        // Show a welcome message on load
+        window.addEventListener('load', function() {
+            apiResponse.innerHTML = `
+                <div class="text-center my-4">
+                    <div class="text-cyber-cyan text-xl mb-2">Welcome to GraphRunner</div>
+                    <p class="text-cyber-gray mb-4">Your advanced tool for Microsoft Graph API exploration</p>
+                    <p class="text-cyber-yellow">To begin, enter your access token above and click "Parse Token"</p>
+                </div>
+                <div class="mt-8 text-cyber-gray text-sm">
+                    <div class="mb-2">Quick Start:</div>
+                    <ol class="list-decimal list-inside space-y-1 ml-4">
+                        <li>Enter your Microsoft Graph API access token</li>
+                        <li>Click "Parse Token" to validate and view permissions</li>
+                        <li>Use the sections below to explore different Graph API endpoints</li>
+                    </ol>
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>
