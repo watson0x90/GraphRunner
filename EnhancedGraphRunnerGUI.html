@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GraphRunner</title>
+    <title>CyberGraphRunner</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Custom configuration for Tailwind CSS -->
@@ -286,7 +286,7 @@
     <div class="container mx-auto px-4 py-8 max-w-7xl">
         <!-- Header -->
         <header class="mb-8 text-center">
-            <h1 class="text-4xl md:text-6xl mb-2 glitch text-neon-cyan">GraphRunner</h1>
+            <h1 class="text-4xl md:text-6xl mb-2 glitch text-neon-cyan">CyberGraphRunner</h1>
             <h2 class="text-xl md:text-2xl text-neon-blue">Advanced Microsoft Graph API Explorer</h2>
             <div class="mt-4 text-cyber-purple text-sm">
                 <span class="inline-block border border-cyber-purple px-2 py-1 rounded">v2.0</span>
@@ -810,7 +810,7 @@
 
         <!-- Footer -->
         <footer class="mt-12 text-center text-sm text-cyber-gray">
-            <p>GraphRunner | Microsoft Graph API Explorer</p>
+            <p>CyberGraphRunner | Microsoft Graph API Explorer</p>
             <p class="mt-2">&copy; 2025 - A Cyberpunk Exploration Tool</p>
         </footer>
     </div>
@@ -3206,7 +3206,7 @@
         window.addEventListener('load', function() {
             apiResponse.innerHTML = `
                 <div class="text-center my-4">
-                    <div class="text-cyber-cyan text-xl mb-2">Welcome to GraphRunner</div>
+                    <div class="text-cyber-cyan text-xl mb-2">Welcome to CyberGraphRunner</div>
                     <p class="text-cyber-gray mb-4">Your advanced tool for Microsoft Graph API exploration</p>
                     <p class="text-cyber-yellow">To begin, enter your access token above and click "Parse Token"</p>
                 </div>
@@ -3219,6 +3219,19 @@
                     </ol>
                 </div>
             `;
+        });
+
+        // When page loads, load token from local storage if available
+        window.addEventListener('load', function() {
+            const savedToken = localStorage.getItem('accessToken');
+            if (savedToken) {
+                tokenInput.value = savedToken;
+            }
+        });
+
+        // When the input changes, save it to local storage
+        tokenInput.addEventListener('input', function() {
+            localStorage.setItem('accessToken', tokenInput.value);
         });
     </script>
 </body>
